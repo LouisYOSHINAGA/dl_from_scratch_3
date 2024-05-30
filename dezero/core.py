@@ -19,17 +19,6 @@ def no_grad():
     return using_config("enable_backprop", False)
 
 
-def as_array(x):
-    if np.isscalar(x):
-        return np.array(x)
-    return x
-
-def as_variable(obj):
-    if isinstance(obj, Variable):
-        return obj
-    return Variable(obj)
-
-
 class Variable:
     __array_property__ = 200
 
@@ -77,6 +66,7 @@ class Variable:
                         x.grad = gx
                     else:
                         x.grad = x.grad + gx
+
                     if x.creator is not None:
                         add_func(x.creator)
 
@@ -108,22 +98,20 @@ class Variable:
         p = str(self.data).replace('\n', '\n' + ' ' * 9)
         return "variable(" + p + ")"
 
-def setup_variable():
-    Variable.__neg__ = neg
-    Variable.__add__ = add
-    Variable.__radd__ = add
-    Variable.__sub__ = sub
-    Variable.__rsub__ = rsub
-    Variable.__mul__ = mul
-    Variable.__rmul__ = mul
-    Variable.__div__ = div
-    Variable.__rdiv__ = rdiv
-    Variable.__pow__ = pow
+
+def as_array(x):
+    if np.isscalar(x):
+        return np.array(x)
+    return x
+
+def as_variable(obj):
+    if isinstance(obj, Variable):
+        return obj
+    return Variable(obj)
 
 
 class Function:
     def __call__(self, *inputs):
-
         inputs = [as_variable(x) for x in inputs]
         xs = [x.data for x in inputs]
         ys = self.forward(*xs)
@@ -141,10 +129,10 @@ class Function:
 
         return outputs if len(outputs) > 1 else outputs[0]
 
-    def forward(self, x):
+    def forward(self, xs):
         raise NotImplementedError()
 
-    def backward(self, gy):
+    def backward(self, gys):
         raise NotImplementedError()
 
 
@@ -211,7 +199,7 @@ class Div(Function):
     def backward(self, gy):
         x0, x1 = self.inputs
         gy0 = gy / x1
-        gy1 = gy / (-x0 / x1 ** 2)
+        gy1 = gy * (-x0 / x1 ** 2)
         return gy0, gy1
 
 def div(x0, x1):
@@ -239,3 +227,16 @@ class Pow(Function):
 
 def pow(x, c):
     return Pow(c)(x)
+
+
+def setup_variable():
+    Variable.__neg__ = neg
+    Variable.__add__ = add
+    Variable.__radd__ = add
+    Variable.__sub__ = sub
+    Variable.__rsub__ = rsub
+    Variable.__mul__ = mul
+    Variable.__rmul__ = mul
+    Variable.__div__ = div
+    Variable.__rdiv__ = rdiv
+    Variable.__pow__ = pow
