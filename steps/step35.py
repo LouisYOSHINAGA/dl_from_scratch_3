@@ -15,7 +15,7 @@ if __name__ == "__main__":
     y.name = "y"
     y.backward(create_graph=True)
 
-    iters = 7
+    iters = 0
     for i in range(iters):
         gx = x.grad
         x.cleargrad()
