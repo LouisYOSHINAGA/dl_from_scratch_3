@@ -2,7 +2,6 @@ import numpy as np
 import weakref
 import contextlib
 import dezero
-import dezero.functions
 
 
 class Config:
