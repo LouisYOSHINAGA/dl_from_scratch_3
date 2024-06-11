@@ -110,6 +110,7 @@ class BroadcastTo(Function):
     def forward(self, x):
         self.x_shape = x.shape
         y = np.broadcast_to(x, self.shape)
+        return y
 
     def backward(self, gy):
         gx = sum_to(gy, self.x_shape)
