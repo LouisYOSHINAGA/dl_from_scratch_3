@@ -179,7 +179,6 @@ class MeanSquaredError(Function):
     def backward(self, gy):
         x0, x1 = self.inputs
         diff = x0 - x1
-        gy = broadcast_to(gy, diff.shape)
         gx0 = gy * diff * (2 / len(diff))
         gx1 = -gx0
         return gx0, gx1
@@ -206,7 +205,6 @@ def linear(x, W, b=None):
     return Linear()(x, W, b)
 
 def linear_simple(x, W, b=None):
-    x, W = as_variable(x), as_variable(W)
     t = matmul(x, W)
     if b is None:
         return t
