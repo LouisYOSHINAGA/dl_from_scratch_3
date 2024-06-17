@@ -175,7 +175,7 @@ class MeanSquaredError(Function):
         diff = x0 - x1
         y = (diff ** 2).sum() / len(diff)
         return y
-    
+
     def backward(self, gy):
         x0, x1 = self.inputs
         diff = x0 - x1
@@ -208,7 +208,7 @@ def linear_simple(x, W, b=None):
     t = matmul(x, W)
     if b is None:
         return t
-    
+
     y = t + b
     t.data = None
     return y
@@ -219,7 +219,7 @@ class Sigmoid(Function):
         y = 1 / (1 + np.exp(-x))
         y = 0.5 * np.tanh(0.5 * x) + 0.5
         return y
-    
+
     def backward(self, gy):
         y = self.outputs[0]()
         gx = gy * y * (1 - y)
@@ -232,3 +232,34 @@ def sigmoid_simple(x):
     x = as_variable(x)
     y = 1 / (1 + exp(-x))
     return y
+
+
+class GetItem(Function):
+    def __init__(self, slices):
+        self.slices = slices
+
+    def forward(self, x):
+        y = x[self.slices]
+        return y
+
+    def backward(self, gy):
+        x, = self.inputs
+        f = GetItemGrad(self.slices, x.shape)
+        return f(gy)
+
+def get_item(x, slices):
+    return GetItem(slices)(x)
+
+
+class GetItemGrad(Function):
+    def __init__(self, slices, in_shape):
+        self.slices = slices
+        self.in_shape = in_shape
+
+    def forward(self, gy):
+        gx = np.zeros(self.in_shape)
+        np.add.at(gx, self.slices, gy)
+        return gx
+
+    def backward(self, ggx):
+        return get_item(ggx, self.slices)
