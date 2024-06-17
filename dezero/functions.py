@@ -60,6 +60,20 @@ def exp(x):
     return Exp()(x)
 
 
+class Log(Function):
+    def forward(self, x):
+        y = np.log(x)
+        return y
+
+    def backward(self, gy):
+        x, = self.inputs
+        gx = gy / x
+        return gx
+
+def log(x):
+    return Log()(x)
+
+
 class Reshape(Function):
     def __init__(self, shape):
         self.shape = shape
@@ -263,3 +277,84 @@ class GetItemGrad(Function):
 
     def backward(self, ggx):
         return get_item(ggx, self.slices)
+
+
+class Softmax(Function):
+    def __init__(self, axis=1):
+        self.axis = axis
+
+    def forward(self, x):
+        y = x - x.max(axis=self.axis, keepdims=True)
+        y = np.exp(x)
+        y /= y.sum(axis=self.axis, keepdims=True)
+        return y
+
+    def backward(self, gy):
+        y = self.outputs[0]()
+        gx = y * gy
+        sumdx = gx.sum(axis=self.axis, keepdims=True)
+        gx -= y * sumdx
+        return gx
+
+def softmax(x, axis=1):
+    return Softmax(axis)(x)
+
+def softmax_simple(x, axis=1):
+    x = as_variable(x)
+    y = exp(x)
+    sum_y = sum(y, axis=axis, keepdims=True)
+    return y / sum_y
+
+
+class SoftmaxCrossEntropy(Function):
+    def forward(self, x, t):
+        N = x.shape[0]
+        log_z = utils.logsumexp(x, axis=1)
+        log_p = x - log_z
+        log_p = log_p[np.arange(N), t.ravel()]
+        y = -log_p.sum() / np.float32(N)
+        return y
+
+    def backward(self, gy):
+        x, t = self.inputs
+        N, CLS_NUM = x.shape
+
+        gy *= 1 / N
+        y = softmax(x)
+
+        t_onehot = np.eye(CLS_NUM, dtype=t.dtype)[t.data]
+        y = (y - t.onehot) * gy
+        return y
+
+def softmax_cross_entropy(x, t):
+    return SoftmaxCrossEntropy()(x, t)
+
+def softmax_cross_entropy_simple(x, t):
+    x, t = as_variable(x), as_variable(t)
+    N = x.shape[0]
+
+    p = softmax(x)
+    p = clip(p, 1e-15, 1.0)
+    log_p = log(p)
+    tlog_p = log_p[np.arange(N), t.data]
+    y = -1 * sum(tlog_p) / N
+    return y
+
+
+class Clip(Function):
+    def __init__(self, x_min, x_max):
+        self.x_min = x_min
+        self.x_max = x_max
+
+    def forward(self, x):
+        y = np.clip(x, self.x_min, self.x_max)
+        return y
+
+    def backward(self, gy):
+        x, = self.inputs
+        mask = (x.data >= self.x_min) * (x.data <= self.x_max)
+        gx = gy * mask
+        return gx
+
+def clip(x, x_min, x_max):
+    return Clip(x_min, x_max)(x)
