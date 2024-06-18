@@ -25,6 +25,7 @@ else:
     import dezero.layers
     import dezero.models
     import dezero.optimizers
+    import dezero.datasets
     import dezero.utils
 
 setup_variable()
