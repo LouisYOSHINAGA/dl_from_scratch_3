@@ -230,14 +230,14 @@ def linear_simple(x, W, b=None):
 
 class Sigmoid(Function):
     def forward(self, x):
-        y = 1 / (1 + np.exp(-x))
+        #y = 1 / (1 + np.exp(-x))
         y = 0.5 * np.tanh(0.5 * x) + 0.5
         return y
 
     def backward(self, gy):
         y = self.outputs[0]()
         gx = gy * y * (1 - y)
-        return y
+        return gx
 
 def sigmoid(x):
     return Sigmoid()(x)
