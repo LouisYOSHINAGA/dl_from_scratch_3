@@ -9,8 +9,6 @@ import dezero.functions as F
 import dezero.layers as L
 import matplotlib.pyplot as plt
 
-import dezero.optimizers
-
 
 class SimpleRNN(Model):
     def __init__(self, hidden_size, out_size):
