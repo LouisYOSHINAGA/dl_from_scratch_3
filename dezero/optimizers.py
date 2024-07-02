@@ -1,4 +1,3 @@
-import numpy as np
 import math
 from dezero import cuda
 
