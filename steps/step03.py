@@ -18,12 +18,12 @@ class Function:
 
 
 class Square(Function):
-    def forward(self, x: Variable) -> Variable:
+    def forward(self, x: np.ndarray) -> np.ndarray:
         return x ** 2
 
 
 class Exp(Function):
-    def forward(self, x: Variable) -> Variable:
+    def forward(self, x: np.ndarray) -> np.ndarray:
         return np.exp(x)
 
 
@@ -33,8 +33,8 @@ if __name__ == "__main__":
     C: Callable[[Variable], Variable] = Square()
 
     x = Variable(np.array(0.5))
-    a = A(x)  # x**2
-    b = B(a)  # exp(x**2)
-    y = C(b)  # exp(x**2)**2
+    a: Variable = A(x)  # x**2
+    b: Variable = B(a)  # exp(x**2)
+    y: Variable = C(b)  # exp(x**2)**2
 
     print(y.data)

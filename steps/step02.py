@@ -1,4 +1,5 @@
 import numpy as np
+from typing import Callable
 
 
 class Variable:
@@ -17,14 +18,14 @@ class Function:
 
 
 class Square(Function):
-    def forward(self, x: Variable) -> Variable:
+    def forward(self, x: np.ndarray) -> np.ndarray:
         return x ** 2
 
 
 if __name__ == "__main__":
     x = Variable(np.array(10))
-    f = Square()
-    y = f(x)
+    f: Callable[[Variable], Variable] = Square()
+    y: Variable = f(x)
 
     print(f"{type(y)=}")
     print(f"{y.data=}")
