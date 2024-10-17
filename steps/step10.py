@@ -18,32 +18,24 @@ class Variable:
     def backward(self) -> None:
         """
             example:
-                L = s( r( q(u) + p(t) ) ) )  // L = s(w), w = r(v), v = q(u) + p(t)
+                L = r( q( p(u) ) )  // L = r(w), w = q(v), v = p(u)
 
-                dL/du = dL/dw * dw/dv * dv/du   // dL/du  = s'(w) * r'(v) * q'(u)
-                      = w.grad * dw/dv * dv/du  // w.grad = s'(w)
-                      = v.grad * dv/du          // v.grad = w.grad * r'(v)
-                      = u.grad                  // u.grad = v.grad * q'(u)
-                dL/dt = dL/dw * dw/dv * dv/dt   // dL/du  = s'(w) * r'(v) * p'(t)
-                      = w.grad * dw/dv * dv/dt  // w.grad = s'(w)
-                      = v.grad * dv/dt          // v.grad = w.grad * r'(v)
-                      = t.grad                  // t.grad = v.grad * p'(t)
-
-                funcs = [s]
-                f = s, x = w, y = L          // L = s(w)
-                w.grad = s.backward(L.grad)  // dL/dw = dL/ds * s'(w)
+                dL/du = dL/dw * dw/dv * dv/du   // dL/du  = r'(w) * q'(v) * p'(u)
+                      = w.grad * dw/dv * dv/du  // w.grad = r'(w)
+                      = v.grad * dv/du          // v.grad = w.grad * q'(v)
+                      = u.grad                  // u.grad = v.grad * p'(u)
 
                 funcs = [r]
-                f = r, x = v, y = w          // w = r(v)
-                v.grad = r.backward(w.grad)  // dL/dv = dL/dw * r'(v)
+                f = r, x = w, y = L          // L = r(w)
+                w.grad = r.backward(L.grad)  // dL/dw = dL/dL * r'(w)
 
-                funcs = [p, q]
-                f = q, y = v, x = u          // v = q(u)
-                u.grad = q.backward(v.grad)  // dL/du = dL/dv * q'(u)
+                funcs = [q]
+                f = q, x = v, y = w          // w = q(v)
+                v.grad = q.backward(w.grad)  // dL/dv = dL/dw * q'(v)
 
                 funcs = [p]
-                f = p, y = v, x = t          // v = p(t)
-                u.grad = p.backward(v.grad)  // dL/du = dL/dv * p'(t)
+                f = p, y = v, x = u          // v = p(u)
+                u.grad = p.backward(v.grad)  // dL/du = dL/dv * p'(u)
         """
         if self.grad is None:
             self.grad = np.ones_like(self.data)
@@ -95,6 +87,24 @@ def square(x: Variable) -> Variable:
     return Square()(x)
 
 
+class Exp(Function):
+    def forward(self, x: np.ndarray) -> np.ndarray:
+        return np.exp(x)
+
+    def backward(self, gy):
+        x: np.ndarray = self.input.data
+        return np.exp(x) * gy
+
+def exp(x: Variable) -> Variable:
+    return Exp()(x)
+
+
+def numerical_diff(f: Callable[[Variable], Variable], x: Variable, eps: float =1e-4) -> np.ndarray:
+    y0: Variable = f(Variable(x.data - eps))
+    y1: Variable = f(Variable(x.data + eps))
+    return (y1.data - y0.data) / (2 * eps)
+
+
 class SquareTest(unittest.TestCase):
     def test_forward(self) -> None:
         x = Variable(np.array(2.0))
@@ -118,22 +128,27 @@ class SquareTest(unittest.TestCase):
         self.assertTrue(np.allclose(x.grad, num_grad))
 
 
-class Exp(Function):
-    def forward(self, x: np.ndarray) -> np.ndarray:
-        return np.exp(x)
+class ExpTest(unittest.TestCase):
+    def test_forward(self) -> None:
+        x = Variable(np.array(2.0))
+        y: Variable = exp(x)
+        expected: np.ndarray = np.array(7.38905609893065022723042746057500)
+        self.assertEqual(y.data, expected)
 
-    def backward(self, gy):
-        x: np.ndarray = self.input.data
-        return np.exp(x) * gy
+    def test_backward(self) -> None:
+        x = Variable(np.array(3.0))
+        y: Variable = exp(x)
+        y.backward()
+        expected: np.ndarray = np.array(20.08553692318766774092852965458171)
+        self.assertEqual(x.grad, expected)
 
-def exp(x: Variable) -> Variable:
-    return Exp()(x)
-
-
-def numerical_diff(f: Callable[[Variable], Variable], x: Variable, eps: float =1e-4) -> np.ndarray:
-    y0: Variable = f(Variable(x.data - eps))
-    y1: Variable = f(Variable(x.data + eps))
-    return (y1.data - y0.data) / (2 * eps)
+    def test_gradient_check(self) -> None:
+        rng: np.ranodm.Generator = np.random.default_rng()
+        x = Variable(rng.random(1))
+        y: Variable = exp(x)
+        y.backward()
+        num_grad: np.ndarray = numerical_diff(exp, x)
+        self.assertTrue(np.allclose(x.grad, num_grad))
 
 
 if __name__ == "__main__":

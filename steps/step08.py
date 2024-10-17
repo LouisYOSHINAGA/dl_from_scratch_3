@@ -14,32 +14,24 @@ class Variable:
     def backward(self) -> None:
         """
             example:
-                L = s( r( q(u) + p(t) ) ) )  // L = s(w), w = r(v), v = q(u) + p(t)
+                L = r( q( p(u) ) )  // L = r(w), w = q(v), v = p(u)
 
-                dL/du = dL/dw * dw/dv * dv/du   // dL/du  = s'(w) * r'(v) * q'(u)
-                      = w.grad * dw/dv * dv/du  // w.grad = s'(w)
-                      = v.grad * dv/du          // v.grad = w.grad * r'(v)
-                      = u.grad                  // u.grad = v.grad * q'(u)
-                dL/dt = dL/dw * dw/dv * dv/dt   // dL/du  = s'(w) * r'(v) * p'(t)
-                      = w.grad * dw/dv * dv/dt  // w.grad = s'(w)
-                      = v.grad * dv/dt          // v.grad = w.grad * r'(v)
-                      = t.grad                  // t.grad = v.grad * p'(t)
-
-                funcs = [s]
-                f = s, x = w, y = L          // L = s(w)
-                w.grad = s.backward(L.grad)  // dL/dw = dL/ds * s'(w)
+                dL/du = dL/dw * dw/dv * dv/du   // dL/du  = r'(w) * q'(v) * p'(u)
+                      = w.grad * dw/dv * dv/du  // w.grad = r'(w)
+                      = v.grad * dv/du          // v.grad = w.grad * q'(v)
+                      = u.grad                  // u.grad = v.grad * p'(u)
 
                 funcs = [r]
-                f = r, x = v, y = w          // w = r(v)
-                v.grad = r.backward(w.grad)  // dL/dv = dL/dw * r'(v)
+                f = r, x = w, y = L          // L = r(w)
+                w.grad = r.backward(L.grad)  // dL/dw = dL/dL * r'(w)
 
-                funcs = [p, q]
-                f = q, y = v, x = u          // v = q(u)
-                u.grad = q.backward(v.grad)  // dL/du = dL/dv * q'(u)
+                funcs = [q]
+                f = q, x = v, y = w          // w = q(v)
+                v.grad = q.backward(w.grad)  // dL/dv = dL/dw * q'(v)
 
                 funcs = [p]
-                f = p, y = v, x = t          // v = p(t)
-                u.grad = p.backward(v.grad)  // dL/du = dL/dv * p'(t)
+                f = p, y = v, x = u          // v = p(u)
+                u.grad = p.backward(v.grad)  // dL/du = dL/dv * p'(u)
         """
         funcs: list[Callable[[Any], Variable]] = [self.creator]
         while funcs:
