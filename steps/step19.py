@@ -1,7 +1,7 @@
 import numpy as np
 import weakref
 import contextlib
-from typing import Callable, Any, Self
+from typing import Generator, Callable, Any, Self
 import unittest
 
 
@@ -9,7 +9,7 @@ class Config:
     enable_backprop: bool = True
 
 @contextlib.contextmanager
-def using_config(name: str, value: bool) -> None:
+def using_config(name: str, value: bool) -> Generator[None, None, None]:
     old_value: bool = getattr(Config, name)
     setattr(Config, name, value)
     try:
@@ -53,10 +53,9 @@ class Variable:
 
     def __repr__(self) -> str:
         if self.data is None:
-            return "Variable (None)"
-        p: str = str(self.data).replace("\n", f"\n{' '*10}")
-        # p: str = str(self.data).replace("\n", f"\n"+(' ' * 10))
-        return f"Variable ({p})"
+            return "Variable(None)"
+        p: str = str(self.data).replace("\n", f"\n{' '*9}")
+        return f"Variable({p})"
 
     def set_creator(self, func: Callable[[Any], Self]) -> None:
         self.creator = func
