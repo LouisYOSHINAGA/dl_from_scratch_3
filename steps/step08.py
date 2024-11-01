@@ -33,11 +33,11 @@ class Variable:
                 f = p, y = v, x = u          // v = p(u)
                 u.grad = p.backward(v.grad)  // dL/du = dL/dv * p'(u)
         """
-        funcs: list[Callable[[Any], Variable]] = [self.creator]
+        funcs: list[Callable[[Any], Self]] = [self.creator]
         while funcs:
-            f: Callable[[Any], Variable] = funcs.pop()
-            x: Variable = f.input
-            y: Variable = f.output
+            f: Callable[[Any], Self] = funcs.pop()
+            x: Self = f.input
+            y: Self = f.output
 
             x.grad = f.backward(y.grad)
             if x.creator is not None:

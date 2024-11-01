@@ -1,7 +1,7 @@
 import numpy as np
 import weakref
 import contextlib
-from typing import Callable, Any, Self
+from typing import Generator, Callable, Any, Self
 import unittest
 
 
@@ -9,7 +9,7 @@ class Config:
     enable_backprop: bool = True
 
 @contextlib.contextmanager
-def using_config(name: str, value: bool) -> None:
+def using_config(name: str, value: bool) -> Generator[None, None, None]:
     old_value: bool = getattr(Config, name)
     setattr(Config, name, value)
     try:
@@ -75,10 +75,10 @@ class Variable:
         if self.grad is None:
             self.grad = np.ones_like(self.data)
 
-        funcs: list[Callable[[Any], Variable]] = []
-        seen_set: set[Callable[[Any], Variable]] = set()
+        funcs: list[Callable[[Any], Self]] = []
+        seen_set: set[Callable[[Any], Self]] = set()
 
-        def add_func(f: Callable[[Any], Variable]) -> None:
+        def add_func(f: Callable[[Any], Self]) -> None:
             if f not in seen_set:
                 funcs.append(f)
                 seen_set.add(f)
@@ -87,7 +87,7 @@ class Variable:
         add_func(self.creator)
 
         while funcs:
-            f: Callable[[Any], Variable] = funcs.pop()
+            f: Callable[[Any], Self] = funcs.pop()
             gys: list[np.ndarray] = [output().grad for output in f.outputs]
             gxs: list[np.ndarray]|np.ndarray = f.backward(*gys)
             if not isinstance(gxs, list):
@@ -166,7 +166,7 @@ class Add(Function):
     def backward(self, gy: np.ndarray) -> list[np.ndarray]:
         return [gy, gy]
 
-def add(x0: np.ndarray, x1: np.ndarray) -> np.ndarray:
+def add(x0: Variable, x1: Variable) -> Variable:
     return Add()(x0, x1)
 
 
@@ -261,7 +261,7 @@ if __name__ == "__main__":
     y.backward()
     print(f"{y.grad=}, {t.grad=}")
     print(f"{x0.grad=}, {x1.grad=}")
-    
+
 
     # with using_config("enable_backprop", False):
     with no_grad():

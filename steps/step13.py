@@ -55,9 +55,9 @@ class Variable:
         if self.grad is None:
             self.grad = np.ones_like(self.data)
 
-        funcs: list[Callable[[Any], Variable]] = [self.creator]
+        funcs: list[Callable[[Any], Self]] = [self.creator]
         while funcs:
-            f: Callable[[Any], Variable] = funcs.pop()
+            f: Callable[[Any], Self] = funcs.pop()
             gys: list[np.ndarray] = [output.grad for output in f.outputs]
             gxs: list[np.ndarray]|np.ndarray = f.backward(*gys)
             if not isinstance(gxs, list):
@@ -128,7 +128,7 @@ class Add(Function):
     def backward(self, gy: np.ndarray) -> list[np.ndarray]:
         return [gy, gy]
 
-def add(x0: np.ndarray, x1: np.ndarray) -> np.ndarray:
+def add(x0: Variable, x1: Variable) -> Variable:
     return Add()(x0, x1)
 
 

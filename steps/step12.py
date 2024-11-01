@@ -40,11 +40,11 @@ class Variable:
         if self.grad is None:
             self.grad = np.ones_like(self.data)
 
-        funcs: list[Callable[[Any], Variable]] = [self.creator]
+        funcs: list[Callable[[Any], Self]] = [self.creator]
         while funcs:
-            f: Callable[[Any], Variable] = funcs.pop()
-            x: Variable = f.input
-            y: Variable = f.output
+            f: Callable[[Any], Self] = funcs.pop()
+            x: Self = f.input
+            y: Self = f.output
 
             x.grad = f.backward(y.grad)
             if x.creator is not None:
@@ -107,7 +107,7 @@ class Add(Function):
     def forward(self, x0: np.ndarray, x1: np.ndarray) -> np.ndarray:
         return x0 + x1
 
-def add(x0: np.ndarray, x1: np.ndarray) -> np.ndarray:
+def add(x0: Variable, x1: Variable) -> Variable:
     return Add()(x0, x1)
 
 

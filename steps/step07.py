@@ -14,7 +14,7 @@ class Variable:
     def backward(self) -> None:
         f: Callable[[Any], Self] = self.creator
         if f is not None:
-            x: Variable = f.input
+            x: Self = f.input
             x.grad = f.backward(self.grad)
             x.backward()
 
