@@ -198,8 +198,7 @@ def add(x0: Variable, x1: Variable) -> Variable:
 
 class Mul(Function):
     def forward(self, x0: np.ndarray, x1: np.ndarray) -> np.ndarray:
-        y: Variable = x0 * x1
-        return y
+        return x0 * x1
 
     def backward(self, gy: np.ndarray) -> list[np.ndarray]:
         x0: np.ndarray = self.inputs[0].data
@@ -314,6 +313,19 @@ class MulTest(unittest.TestCase):
         expected1: np.ndarray = np.array(2.0)
         self.assertEqual(x0.grad, expected0)
         self.assertEqual(x1.grad, expected1)
+
+    def test_forward_twice(self) -> None:
+        x = Variable(np.array(2.0))
+        y: Variable = x * x
+        expected: np.ndarray = np.array(4.0)
+        self.assertEqual(y.data, expected)
+
+    def test_backward_twice(self) -> None:
+        x = Variable(np.array(2.0))
+        y: Variable = x * x
+        y.backward()
+        expected: np.ndarray = np.array(4.0)
+        self.assertEqual(x.grad, expected)
 
 
 if __name__ == "__main__":
