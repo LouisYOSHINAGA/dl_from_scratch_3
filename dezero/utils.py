@@ -1,67 +1,66 @@
-import os
-import subprocess
+import os, subprocess
 import urllib.request
 import numpy as np
+from dezero import Variable, Function
+from typing import Callable, Any
+
+IND: str = f"{' ' * 4}"
+NWI: str = f"\n{IND}"  # newline with indent
 
 
-def _dot_var(v, verbose=False):
-    dot_var = '{} [label="{}", color=orange, style=filled]\n'
-    name = "" if v.name is None else v.name
+def _dot_var(v: Variable, verbose: bool =False) -> str:
+    name: str = "" if v.name is None else v.name
     if verbose and v.data is not None:
         if v.name is not None:
             name += ": "
-        name += str(v.shape) + " " + str(v.dtype)
-    return dot_var.format(id(v), name)
+        name += f"{str(v.shape)} {str(v.dtype)}"
+    return f"{id(v)} [label=\"{name}\", color=orange, style=filled]{NWI}"
 
-def _dot_func(f):
-    dot_func = '{} [label="{}", color=lightblue, style=filled, shape=box]\n'
-    txt = dot_func.format(id(f), f.__class__.__name__)
-
-    dot_edge = '{} -> {}\n'
+def _dot_func(f: Function) -> Function:
+    txt: str = f"{id(f)} [label=\"{f.__class__.__name__}\", color=lightblue, style=filled, shape=box]{NWI}"
     for x in f.inputs:
-        txt += dot_edge.format(id(x), id(f))
+        txt += f"{IND}{id(x)} -> {id(f)}{NWI}"
     for y in f.outputs:
-        txt += dot_edge.format(id(f), id(y()))
+        txt += f"{IND}{id(f)} -> {id(y())}{NWI}"
     return txt
 
-def get_dot_graph(output, verbose=True):
-    txt = ""
-    funcs = []
-    seen_set = set()
+def get_dot_graph(output: Variable, verbose: bool =True) -> str:
+    txt: str = ""
+    funcs: list[Callable[[Any], Variable]] = []
+    seen_set: set[Callable[[Any], Variable]] = set()
 
-    def add_func(f):
+    def add_func(f: Function) -> None:
         if f not in seen_set:
             funcs.append(f)
-            # funcs.sort(key=lambda x: x.generation)
             seen_set.add(f)
 
     add_func(output.creator)
     txt += _dot_var(output, verbose)
 
     while funcs:
-        func = funcs.pop()
+        func: Callable[[Any], Variable] = funcs.pop()
         txt += _dot_func(func)
         for x in func.inputs:
             txt += _dot_var(x, verbose)
             if x.creator is not None:
                 add_func(x.creator)
 
-    return 'digraph g{\n' + txt + ' }'
+    return f"digraph g{{{NWI}{txt[:-len(IND)]}}}"
 
-def plot_dot_graph(output, verbose=True, to_file="graph.png"):
-    dot_graph = get_dot_graph(output, verbose)
-
-    tmp_dir = os.path.join(os.path.expanduser('~'), '.dezero')
+def plot_dot_graph(output: Variable, verbose: bool =True, to_stdout: bool =False, to_file: str ="graph.png") -> None:
+    tmp_dir: list[str] = os.path.join(os.path.expanduser('~'), '.dezero')
     if not os.path.exists(tmp_dir):
         os.mkdir(tmp_dir)
-    graph_path = os.path.join(tmp_dir, "tmp_graph.dot")
+    graph_path: str = os.path.join(tmp_dir, "tmp_graph.dot")
 
+    dot_graph: str = get_dot_graph(output, verbose)
+    if to_stdout:
+        print(f"{dot_graph}")
     with open(graph_path, 'w') as f:
         f.write(dot_graph)
 
-    extension = os.path.splitext(to_file)[1][1:]
-    cmd = f"dot {graph_path} -T {extension} -o {to_file}"
-    subprocess.run(cmd, shell=True)
+    extension: str = os.path.splitext(to_file)[1][1:]
+    subprocess.run(f"dot {graph_path} -T {extension} -o {to_file}", shell=True)
 
 
 def reshape_sum_backward(gy, x_shape, axis, keepdims):
