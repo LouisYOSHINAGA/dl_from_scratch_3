@@ -33,7 +33,7 @@ class Variable:
         self.name: str = name
         self.data: np.ndarray = data
         self.grad: np.ndarray|None = None
-        self.creator: Callable[[Any], Self] = None
+        self.creator: Callable[[Any], Self]|None = None
         self.generation: int = 0
 
     @property

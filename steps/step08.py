@@ -6,7 +6,7 @@ class Variable:
     def __init__(self, data: np.ndarray) -> None:
         self.data: np.ndarray = data
         self.grad: np.ndarray|None = None
-        self.creator: Callable[[Any], Self] = None
+        self.creator: Callable[[Any], Self]|None = None
 
     def set_creator(self, func: Callable[[Any], Self]) -> None:
         self.creator = func
