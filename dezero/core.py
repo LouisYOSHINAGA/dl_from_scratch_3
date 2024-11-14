@@ -2,6 +2,7 @@ from __future__ import annotations
 import numpy as np
 import weakref
 import contextlib
+import dezero
 from typing import TypeAlias, Generator, Callable, Any, Self
 
 Scalar: TypeAlias = int | float | np.ndarray
@@ -136,6 +137,18 @@ class Variable:
 
     def cleargrad(self) -> None:
         self.grad = None
+
+    def reshape(self, *shape: int) -> Self:
+        if len(shape) == 1 and isinstance(shape[0], (tuple, list)):
+            shape = shape[0]
+        return dezero.functions.reshape(self, shape)
+
+    def transpose(self) -> Self:
+        return dezero.functions.transpose(self)
+
+    @property
+    def T(self) -> Self:
+        return dezero.functions.transpose(self)
 
 def as_array(x: Scalar|np.ndarray) -> np.ndarray:
     if np.isscalar(x):

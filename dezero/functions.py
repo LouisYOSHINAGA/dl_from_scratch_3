@@ -1,5 +1,6 @@
 import numpy as np
-from dezero.core import Variable, Function
+from dezero.core import as_variable, Variable, Function
+from typing import Any
 
 
 class Sin(Function):
@@ -36,3 +37,39 @@ class Tanh(Function):
 
 def tanh(x: Variable) -> Variable:
     return Tanh()(x)
+
+
+class Reshape(Function):
+    def __init__(self, shape: tuple[Any]) -> None:
+        self.shape: tuple[Any] = shape
+
+    def forward(self, x: np.ndarray) -> np.ndarray:
+        self.x_shape: tuple[Any] = x.shape
+        return x.reshape(self.shape)
+
+    def backward(self, gy: Variable) -> Variable:
+        return reshape(gy, self.x_shape)
+
+def reshape(x: Variable, shape: tuple[Any]) -> Variable:
+    if x.shape == shape:
+        return as_variable(x)
+    return Reshape(shape)(x)
+
+
+class Transpose(Function):
+    def __init__(self, axes: tuple[Any]|None =None) -> None:
+        self.axes: tuple[Any]|None = axes
+
+    def forward(self, x: np.ndarray) -> np.ndarray:
+        return x.transpose(self.axes)
+
+    def backward(self, gy: Variable) -> Variable:
+        if self.axes is None:
+            return transpose(gy)
+        inv_axes: tuple[Any] = tuple(
+            np.argsort([ax % len(self.axes) for ax in self.axes])
+        )
+        return transpose(gy, inv_axes)
+
+def transpose(x: Variable, axes: tuple[Any]|None =None) -> Variable:
+    return Transpose(axes)(x)
