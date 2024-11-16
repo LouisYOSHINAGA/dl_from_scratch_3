@@ -5,6 +5,8 @@ import contextlib
 import dezero
 from typing import TypeAlias, Generator, Callable, Any, Self
 
+import dezero.functions
+
 Scalar: TypeAlias = int | float | np.ndarray
 
 
@@ -149,6 +151,9 @@ class Variable:
     @property
     def T(self) -> Self:
         return dezero.functions.transpose(self)
+
+    def sum(self, axis: int|None =None, keepdims: bool =False) -> Variable:
+        return dezero.functions.sum(self, axis, keepdims)
 
 def as_array(x: Scalar|np.ndarray) -> np.ndarray:
     if np.isscalar(x):
