@@ -63,6 +63,17 @@ def plot_dot_graph(output: Variable, verbose: bool =True, to_stdout: bool =False
     subprocess.run(f"dot {graph_path} -T {extension} -o {to_file}", shell=True)
 
 
+def sum_to(x: np.ndarray, shape: tuple[Any]) -> np.ndarray:
+    ndim: int = len(shape)
+    lead: int = x.ndim - ndim
+    lead_axis: tuple[Any] = tuple(range(lead))
+
+    axis: tuple[Any] = tuple([i + lead for i, sx in enumerate(shape) if sx == 1])
+    y: np.ndarray = x.sum(lead_axis + axis, keepdims=True)
+    if lead > 0:
+        y = y.squeeze(lead_axis)
+    return y
+
 def reshape_sum_backward(gy, x_shape, axis, keepdims):
     ndim = len(x_shape)
     tupled_axis = axis
@@ -82,17 +93,6 @@ def reshape_sum_backward(gy, x_shape, axis, keepdims):
     gy = gy.reshape(shape)  # reshape
     return gy
 
-
-def sum_to(x, shape):
-    ndim = len(shape)
-    lead = x.ndim - ndim
-    lead_axis = tuple(range(lead))
-
-    axis = tuple([i + lead for i, sx in enumerate(shape) if sx == 1])
-    y = x.sum(lead_axis + axis, keepdims=True)
-    if lead > 0:
-        y = y.squeeze(lead_axis)
-    return y
 
 def logsumexp(x, axis=1):
     m = x.max(axis=axis, keepdims=True)

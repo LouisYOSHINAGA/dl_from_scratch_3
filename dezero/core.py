@@ -5,7 +5,6 @@ import contextlib
 import dezero
 from typing import TypeAlias, Generator, Callable, Any, Self
 
-import dezero.functions
 
 Scalar: TypeAlias = int | float | np.ndarray
 
@@ -203,10 +202,17 @@ def neg(x: Variable) -> Variable:
 
 class Add(Function):
     def forward(self, x0: np.ndarray, x1: np.ndarray) -> np.ndarray:
+        self.x0_shape: tuple[Any] = x0.shape
+        self.x1_shape: tuple[Any] = x1.shape
         return x0 + x1
 
     def backward(self, gy: Variable) -> list[Variable]:
-        return [gy, gy]
+        gx0: Variable = gy
+        gx1: Variable = gy
+        if self.x0_shape != self.x1_shape:
+            gx0 = dezero.functions.sum_to(gx0, self.x0_shape)
+            gx1 = dezero.functions.sum_to(gx1, self.x1_shape)
+        return [gx0, gx1]
 
 def add(x0: Variable, x1: Scalar|Variable) -> Variable:
     x1: np.ndarray = as_array(x1)

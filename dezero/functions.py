@@ -91,3 +91,37 @@ class Sum(Function):
 
 def sum(x: Variable, axis: int|None =None, keepdims: bool =False) -> Variable:
     return Sum(axis, keepdims)(x)
+
+
+class BroadCastTo(Function):
+    def __init__(self, shape: tuple[Any]) -> None:
+        self.shape: tuple[Any] = shape
+
+    def forward(self, x: np.ndarray) -> np.ndarray:
+        self.x_shape: tuple[Any] = x.shape
+        return np.broadcast_to(x, self.shape)
+
+    def backward(self, gy: Variable) -> Variable:
+        return sum_to(gy, self.x_shape)
+
+def broadcast_to(x: Variable, shape: tuple[Any]) -> Variable:
+    if x.shape == shape:
+        return as_variable(x)
+    return BroadCastTo(shape)(x)
+
+
+class SumTo(Function):
+    def __init__(self, shape: tuple[Any]) -> None:
+        self.shape: tuple[Any] = shape
+
+    def forward(self, x: np.ndarray) -> np.ndarray:
+        self.x_shape: tuple[Any] = x.shape
+        return utils.sum_to(x, self.shape)
+
+    def backward(self, gy: Variable) -> Variable:
+        return broadcast_to(gy, self.x_shape)
+
+def sum_to(x: Variable, shape: tuple[Any]) -> Variable:
+    if x.shape == shape:
+        return as_variable(x)
+    return SumTo(shape)(x)
