@@ -9,13 +9,11 @@ import dezero.functions as F
 if __name__ == "__main__":
     x = Variable(np.array([[1, 2, 3], [4, 5, 6]]))
     c = Variable(np.array([[10, 20, 30], [40, 50, 60]]))
-
     t: Variable = x + c
-    print(f"{t=}")
-
     y = F.sum(t)
     y.backward(retain_grad=True)
-    print(f"{y.grad}")
-    print(f"{t.grad}")
-    print(f"{x.grad}")
-    print(f"{c.grad}")
+    print(f"{t=}")
+    print(f"{y.grad=}")
+    print(f"{t.grad=}")
+    print(f"{x.grad=}")
+    print(f"{c.grad=}")

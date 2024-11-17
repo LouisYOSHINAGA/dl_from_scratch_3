@@ -31,6 +31,6 @@ if __name__ == "__main__":
     print()
 
 
-    x = Variable(np.ramdom.default_rng().random(2, 3, 4, 5))
+    x = Variable(np.random.default_rng().random((2, 3, 4, 5)))
     y: Variable = x.sum(keepdims=True)
     print(f"{y.shape=}")
