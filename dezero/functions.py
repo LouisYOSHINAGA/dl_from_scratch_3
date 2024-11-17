@@ -86,7 +86,7 @@ class Sum(Function):
         return x.sum(axis=self.axis, keepdims=self.keepdims)
 
     def backward(self, gy: Variable) -> Variable:
-        gy = utils.reshape_sum_backward(gy, self.x_shape, self.axis, self.keepsdims)
+        gy: Variable = utils.reshape_sum_backward(gy, self.x_shape, self.axis, self.keepdims)
         return broadcast_to(gy, self.x_shape)
 
 def sum(x: Variable, axis: int|None =None, keepdims: bool =False) -> Variable:

@@ -74,24 +74,23 @@ def sum_to(x: np.ndarray, shape: tuple[Any]) -> np.ndarray:
         y = y.squeeze(lead_axis)
     return y
 
-def reshape_sum_backward(gy, x_shape, axis, keepdims):
-    ndim = len(x_shape)
-    tupled_axis = axis
+def reshape_sum_backward(gy: Variable, x_shape: tuple[Any], axis: int|tuple[Any]|None, keepdims: bool) -> Variable:
+    ndim: int = len(x_shape)
     if axis is None:
         tupled_axis = None
     elif not isinstance(axis, tuple):
         tupled_axis = (axis,)
-
-    if not (ndim == 0 or tupled_axis is None or keepdims):
-        actual_axis = [a if a >= 0 else a + ndim for a in tupled_axis]
-        shape = list(gy.shape)
-        for a in sorted(actual_axis):
-            shape.insert(a, 1)
     else:
-        shape = gy.shape
+        tupled_axis = axis
 
-    gy = gy.reshape(shape)  # reshape
-    return gy
+    if ndim == 0 or tupled_axis is None or keepdims:
+        shape = gy.shape
+    else:
+        actual_axis: list[int] = [axis if axis >= 0 else axis + ndim for axis in tupled_axis]
+        shape: list[Any] = list(gy.shape)
+        for axis in sorted(actual_axis):
+            shape.insert(axis, 1)
+    return gy.reshape(shape)
 
 
 def logsumexp(x, axis=1):
