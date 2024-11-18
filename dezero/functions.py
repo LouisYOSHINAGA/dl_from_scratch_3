@@ -41,25 +41,25 @@ def tanh(x: Variable) -> Variable:
 
 
 class Reshape(Function):
-    def __init__(self, shape: tuple[Any]) -> None:
-        self.shape: tuple[Any] = shape
+    def __init__(self, shape: tuple[int, ...]) -> None:
+        self.shape: tuple[int, ...] = shape
 
     def forward(self, x: np.ndarray) -> np.ndarray:
-        self.x_shape: tuple[Any] = x.shape
+        self.x_shape: tuple[int, ...] = x.shape
         return x.reshape(self.shape)
 
     def backward(self, gy: Variable) -> Variable:
         return reshape(gy, self.x_shape)
 
-def reshape(x: Variable, shape: tuple[Any]) -> Variable:
+def reshape(x: Variable, shape: tuple[int, ...]) -> Variable:
     if x.shape == shape:
         return as_variable(x)
     return Reshape(shape)(x)
 
 
 class Transpose(Function):
-    def __init__(self, axes: tuple[Any]|None =None) -> None:
-        self.axes: tuple[Any]|None = axes
+    def __init__(self, axes: tuple[int, ...]|None =None) -> None:
+        self.axes: tuple[int, ...]|None = axes
 
     def forward(self, x: np.ndarray) -> np.ndarray:
         return x.transpose(self.axes)
@@ -67,12 +67,12 @@ class Transpose(Function):
     def backward(self, gy: Variable) -> Variable:
         if self.axes is None:
             return transpose(gy)
-        inv_axes: tuple[Any] = tuple(
+        inv_axes: tuple[int, ...] = tuple(
             np.argsort([ax % len(self.axes) for ax in self.axes])
         )
         return transpose(gy, inv_axes)
 
-def transpose(x: Variable, axes: tuple[Any]|None =None) -> Variable:
+def transpose(x: Variable, axes: tuple[int, ...]|None =None) -> Variable:
     return Transpose(axes)(x)
 
 
@@ -82,7 +82,7 @@ class Sum(Function):
         self.keepdims: bool = keepdims
 
     def forward(self, x: np.ndarray) -> np.ndarray:
-        self.x_shape: tuple[Any] = x.shape
+        self.x_shape: tuple[int, ...] = x.shape
         return x.sum(axis=self.axis, keepdims=self.keepdims)
 
     def backward(self, gy: Variable) -> Variable:
@@ -94,34 +94,34 @@ def sum(x: Variable, axis: int|None =None, keepdims: bool =False) -> Variable:
 
 
 class BroadCastTo(Function):
-    def __init__(self, shape: tuple[Any]) -> None:
-        self.shape: tuple[Any] = shape
+    def __init__(self, shape: tuple[int, ...]) -> None:
+        self.shape: tuple[int, ...] = shape
 
     def forward(self, x: np.ndarray) -> np.ndarray:
-        self.x_shape: tuple[Any] = x.shape
+        self.x_shape: tuple[int, ...] = x.shape
         return np.broadcast_to(x, self.shape)
 
     def backward(self, gy: Variable) -> Variable:
         return sum_to(gy, self.x_shape)
 
-def broadcast_to(x: Variable, shape: tuple[Any]) -> Variable:
+def broadcast_to(x: Variable, shape: tuple[int, ...]) -> Variable:
     if x.shape == shape:
         return as_variable(x)
     return BroadCastTo(shape)(x)
 
 
 class SumTo(Function):
-    def __init__(self, shape: tuple[Any]) -> None:
-        self.shape: tuple[Any] = shape
+    def __init__(self, shape: tuple[int, ...]) -> None:
+        self.shape: tuple[int, ...] = shape
 
     def forward(self, x: np.ndarray) -> np.ndarray:
-        self.x_shape: tuple[Any] = x.shape
+        self.x_shape: tuple[int, ...] = x.shape
         return utils.sum_to(x, self.shape)
 
     def backward(self, gy: Variable) -> Variable:
         return broadcast_to(gy, self.x_shape)
 
-def sum_to(x: Variable, shape: tuple[Any]) -> Variable:
+def sum_to(x: Variable, shape: tuple[int, ...]) -> Variable:
     if x.shape == shape:
         return as_variable(x)
     return SumTo(shape)(x)

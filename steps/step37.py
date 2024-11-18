@@ -10,7 +10,7 @@ if __name__ == "__main__":
     x = Variable(np.array([[1, 2, 3], [4, 5, 6]]))
     c = Variable(np.array([[10, 20, 30], [40, 50, 60]]))
     t: Variable = x + c
-    y = F.sum(t)
+    y: Variable = F.sum(t)
     y.backward(retain_grad=True)
     print(f"{t=}")
     print(f"{y.grad=}")

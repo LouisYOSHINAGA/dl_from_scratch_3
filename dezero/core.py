@@ -39,7 +39,7 @@ class Variable:
         self.generation: int = 0
 
     @property
-    def shape(self) -> tuple[Any]:
+    def shape(self) -> tuple[int, ...]:
         return self.data.shape
 
     @property
@@ -202,8 +202,8 @@ def neg(x: Variable) -> Variable:
 
 class Add(Function):
     def forward(self, x0: np.ndarray, x1: np.ndarray) -> np.ndarray:
-        self.x0_shape: tuple[Any] = x0.shape
-        self.x1_shape: tuple[Any] = x1.shape
+        self.x0_shape: tuple[int, ...] = x0.shape
+        self.x1_shape: tuple[int, ...] = x1.shape
         return x0 + x1
 
     def backward(self, gy: Variable) -> list[Variable]:

@@ -37,7 +37,7 @@ class Variable:
         self.generation: int = 0
 
     @property
-    def shape(self) -> tuple[Any]:
+    def shape(self) -> tuple[int, ...]:
         return self.data.shape
 
     @property
