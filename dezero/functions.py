@@ -139,3 +139,20 @@ class MatMul(Function):
 
 def matmul(x: Variable, W: Variable) -> Variable:
     return MatMul()(x, W)
+
+
+class MeanSquaredError(Function):
+    def forward(self, x0: np.ndarray, x1: np.ndarray) -> np.ndarray:
+        diff: Variable = x0 - x1
+        return (diff ** 2).sum() / len(diff)
+
+    def backward(self, gy: Variable) -> list[Variable]:
+        x0, x1 = self.inputs
+        diff: Variable = x0 - x1
+        gy: Variable = broadcast_to(gy, diff.shape)
+        gx0: Variable = gy * diff * (2 / len(diff))
+        gx1: Variable = - gx0
+        return [gx0, gx1]
+
+def mean_squared_error(x0: Variable, x1: Variable) -> Variable:
+    return MeanSquaredError()(x0, x1)
