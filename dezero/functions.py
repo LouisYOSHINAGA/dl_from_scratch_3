@@ -125,3 +125,17 @@ def sum_to(x: Variable, shape: tuple[int, ...]) -> Variable:
     if x.shape == shape:
         return as_variable(x)
     return SumTo(shape)(x)
+
+
+class MatMul(Function):
+    def forward(self, x: np.ndarray, W: np.ndarray) -> np.ndarray:
+        return x.dot(W)
+
+    def backward(self, gy: Variable) -> list[Variable]:
+        x, W = self.inputs
+        gx: Variable = matmul(gy, W.T)
+        gW: Variable = matmul(x.T, gy)
+        return [gx, gW]
+
+def matmul(x: Variable, W: Variable) -> Variable:
+    return MatMul()(x, W)
