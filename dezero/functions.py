@@ -1,7 +1,6 @@
 import numpy as np
 from dezero.core import as_variable, Variable, Function
 from dezero import utils
-from typing import Any
 
 
 class Sin(Function):
@@ -38,6 +37,29 @@ class Tanh(Function):
 
 def tanh(x: Variable) -> Variable:
     return Tanh()(x)
+
+
+class Exp(Function):
+    def forward(self, x: np.ndarray) -> np.ndarray:
+        return np.exp(x)
+
+    def backward(self, gy: Variable) -> Variable:
+        return gy * self.outputs[0]()
+
+def exp(x: Variable) -> Variable:
+    return Exp()(x)
+
+
+class Log(Function):
+    def forward(self, x: np.ndarray) -> np.ndarray:
+        return np.log(x)
+    
+    def backward(self, gy: Variable) -> Variable:
+        x, = self.inputs
+        return gy / x
+
+def log(x: Variable) -> Variable:
+    return Log()(x)
 
 
 class Reshape(Function):
@@ -156,3 +178,47 @@ class MeanSquaredError(Function):
 
 def mean_squared_error(x0: Variable, x1: Variable) -> Variable:
     return MeanSquaredError()(x0, x1)
+
+
+class Linear(Function):
+    def forward(self, x: np.ndarray, W: np.ndarray, b: np.ndarray|None) -> np.ndarray:
+        y: np.ndarray = x.dot(W)
+        if b is not None:
+            y += b
+        return y
+
+    def backward(self, gy: Variable) -> list[Variable]:
+        x, W, b = self.inputs
+        gb: Variable|None = None if b.data is None else sum_to(gy, b.shape)
+        gx: Variable = matmul(gy, W.T)
+        gW: Variable = matmul(x.T, gy)
+        return [gx, gW, gb]
+
+def linear(x: Variable, W: Variable, b: Variable|None) -> Variable:
+    return Linear()(x, W, b)
+
+def linear_simple(x: np.ndarray|Variable, W: np.ndarray|Variable, b: np.ndarray|Variable|None =None) -> Variable:
+    x = as_variable(x)
+    W = as_variable(W)
+    t: Variable = matmul(x, W)
+    if b is None:
+        return t
+    y: Variable = t + b
+    t.data = None
+    return y
+
+
+class Sigmoid(Function):
+    def forward(self, x: np.ndarray) -> np.ndarray:
+        return 0.5 + 0.5 * np.tanh(0.5 * x) 
+
+    def backward(self, gy: Variable) -> Variable:
+        y: Variable = self.outputs[0]()
+        return gy * y * (1 - y)
+
+def sigmoid(x: Variable) -> Variable:
+    return Sigmoid()(x)
+
+def sigmoid_simple(x: np.ndarray|Variable) -> Variable:
+    x = as_variable(x)
+    return 1 / (1 + exp(-x))
