@@ -160,6 +160,10 @@ def as_array(x: Scalar|np.ndarray) -> np.ndarray:
     return x
 
 
+class Parameter(Variable):
+    pass
+
+
 class Function:
     def __call__(self, *inputs: Variable|np.ndarray) -> list[Variable]|Variable:
         vinputs: list[Variable] = [as_variable(x) for x in inputs]
