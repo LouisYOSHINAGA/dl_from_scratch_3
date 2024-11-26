@@ -16,6 +16,8 @@ else:
     from dezero.core import Parameter
     from dezero.core import Function
     from dezero.core import as_variable
+    from dezero.layers import Layer
+    from dezero.models import Model
     from dezero.core import setup_variable
 
     import dezero.functions
