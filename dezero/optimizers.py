@@ -1,93 +1,54 @@
-import math
-from dezero import cuda
+import numpy as np
+from dezero import Layer, Parameter
+from typing import Callable, Self
 
 
 class Optimizer:
-    def __init__(self):
-        self.target = None
-        self.hooks = []
+    def __init__(self) -> None:
+        self.target: Layer|None = None
+        self.hooks: list[Callable[[list[Parameter]], None]] = []
 
-    def setup(self, target):
+    def setup(self, target: Layer) -> Self:
         self.target = target
         return self
 
-    def update(self):
-        params = [p for p in self.target.params() if p.grad is not None]
+    def add_hook(self, f: Callable[[list[Parameter]], None]) -> None:
+        self.hooks.append(f)
 
+    def update(self) -> None:
+        params: list[Parameter] = [p for p in self.target.params() if p.grad is not None]
+
+        # preprocess
         for f in self.hooks:
             f(params)
 
+        # update
         for param in params:
             self.update_one(param)
 
-    def update_one(self, param):
+    def update_one(self, param: Parameter) -> None:
         raise NotImplementedError()
-
-    def add_hook(self, f):
-        self.hooks.append(f)
 
 
 class SGD(Optimizer):
-    def __init__(self, lr=0.01):
+    def __init__(self, lr: float =0.01) -> None:
         super().__init__()
         self.lr = lr
 
-    def update_one(self, param):
+    def update_one(self, param: Parameter) -> None:
         param.data -= self.lr * param.grad.data
 
 
 class MomentumSGD(Optimizer):
-    def __init__(self, lr=0.01, momentum=0.9):
+    def __init__(self, lr: float =0.01, momentum: float =0.9) -> None:
         super().__init__()
-        self.lr = lr
-        self.momentum = momentum
-        self.vs = {}
+        self.lr: float = lr
+        self.momentum: float = momentum
+        self.vs: dict[int, np.ndarray] = {}
 
-    def update_one(self, param):
-        v_key = id(param)
+    def update_one(self, param: Parameter) -> None:
+        v_key: int = id(param)
         if v_key not in self.vs:
-            xp = cuda.get_array_module(param.data)
-            self.vs[v_key] = xp.zeros_like(param.data)
-
-        v = self.vs[v_key]
-        v *= self.momentum
-        v -= self.lr * param.grad.data
+            self.vs[v_key] = np.zeros_like(param.data)
+        v: np.ndarray = self.momentum * self.vs[v_key] - self.lr * param.grad.data
         param.data += v
-
-
-class Adam(Optimizer):
-    def __init__(self, alpha=0.001, beta1=0.9, beta2=0.999, eps=1e-8):
-        super().__init__()
-        self.t = 0
-        self.alpha = alpha
-        self.beta1 = beta1
-        self.beta2 = beta2
-        self.eps = eps
-        self.ms = {}
-        self.vs = {}
-
-    def update(self, *args, **kwargs):
-        self.t += 1
-        super().update(*args, **kwargs)
-
-    @property
-    def lr(self):
-        fix1 = 1. - math.pow(self.beta1, self.t)
-        fix2 = 1. - math.pow(self.beta2, self.t)
-        return self.alpha * math.sqrt(fix2) / fix1
-
-    def update_one(self, param):
-        xp = cuda.get_array_module(param.data)
-
-        key = id(param)
-        if key not in self.ms:
-            self.ms[key] = xp.zeros_like(param.data)
-            self.vs[key] = xp.zeros_like(param.data)
-
-        m, v = self.ms[key], self.vs[key]
-        beta1, beta2, eps = self.beta1, self.beta2, self.eps
-        grad = param.grad.data
-
-        m += (1 - beta1) * (grad - m)
-        v += (1 - beta2) * (grad * grad - v)
-        param.data -= self.lr * m / (xp.sqrt(v) + eps)
