@@ -295,3 +295,4 @@ def setup_variable() -> None:
     Variable.__truediv__ = div
     Variable.__rtruediv__ = rdiv
     Variable.__pow__ = pow
+    Variable.__getitem__ = dezero.functions.get_item
