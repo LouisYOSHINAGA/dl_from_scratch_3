@@ -37,36 +37,28 @@ class Dataset:
         pass
 
 
-# =============================================================================
-# Toy datasets
-# =============================================================================
-def get_spiral(train=True):
-    seed = 1984 if train else 2020
-    np.random.seed(seed=seed)
+def get_spiral(train: bool= True) -> tuple[np.ndarray, np.ndarray]:
+    rng: np.random.Generator = np.random.default_rng(1984 if train else 2020)
 
-    num_data, num_class, input_dim = 100, 3, 2
-    data_size = num_class * num_data
-    x = np.zeros((data_size, input_dim), dtype=np.float32)
-    t = np.zeros(data_size, dtype=int)
+    n_class: int = 3
+    n_data: int = 100
+    input_dim: int = 2
+    data_size: int = n_class * n_data
 
-    for j in range(num_class):
-        for i in range(num_data):
-            rate = i / num_data
-            radius = 1.0 * rate
-            theta = j * 4.0 + 4.0 * rate + np.random.randn() * 0.2
-            ix = num_data * j + i
-            x[ix] = np.array([radius * np.sin(theta),
-                              radius * np.cos(theta)]).flatten()
-            t[ix] = j
-    # Shuffle
-    indices = np.random.permutation(num_data * num_class)
-    x = x[indices]
-    t = t[indices]
-    return x, t
+    xs: np.ndarray = np.zeros((data_size, input_dim), dtype=np.float32)
+    ts: np.ndarray = np.zeros(data_size, dtype=int)
+    for i in range(n_class):
+        radius: np.ndarray = np.arange(n_data) / n_data
+        thetas: np.ndarray = 4 * i + 4 * radius + 0.2 * rng.random(size=n_data)
+        xs[i*n_data:(i+1)*n_data] = np.array([radius * np.cos(thetas), radius * np.sin(thetas)]).T
+        ts[i*n_data:(i+1)*n_data] = i
+
+    indexes: np.ndarray = rng.permutation(n_data * n_class)
+    return xs[indexes], ts[indexes]
 
 
 class Spiral(Dataset):
-    def prepare(self):
+    def prepare(self) -> None:
         self.data, self.label = get_spiral(self.train)
 
 
@@ -232,7 +224,7 @@ class CIFAR100(CIFAR10):
     def labels(label_type='fine'):
         coarse_labels = dict(enumerate(['aquatic mammals','fish','flowers','food containers','fruit and vegetables','household electrical device','household furniture','insects','large carnivores','large man-made outdoor things','large natural outdoor scenes','large omnivores and herbivores','medium-sized mammals','non-insect invertebrates','people','reptiles','small mammals','trees','vehicles 1','vehicles 2']))
         fine_labels = []
-        return fine_labels if label_type is 'fine' else coarse_labels
+        return fine_labels if label_type == 'fine' else coarse_labels
 
 
 
