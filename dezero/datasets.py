@@ -3,38 +3,36 @@ import gzip
 import tarfile
 import pickle
 import numpy as np
-import matplotlib.pyplot as plt
 from dezero.utils import get_file, cache_dir
 from dezero.transforms import Compose, Flatten, ToFloat, Normalize
+import matplotlib.pyplot as plt
+from typing import Callable, Any
 
 
 class Dataset:
-    def __init__(self, train=True, transform=None, target_transform=None):
-        self.train = train
-        self.transform = transform
-        self.target_transform = target_transform
-        if self.transform is None:
-            self.transform = lambda x: x
-        if self.target_transform is None:
-            self.target_transform = lambda x: x
-
-        self.data = None
-        self.label = None
+    def __init__(self, train: bool =True, transform: Callable[[Any], Any]|None =None,
+                 target_transform: Callable[[Any], Any]|None =None):
+        self.train: bool = train
+        self.transform: Callable[[Any], Any] = transform if transform is not None \
+                                               else lambda x: x
+        self.target_transform: Callable[[Any], Any] = target_transform if target_transform is not None \
+                                                      else lambda x: x
+        self.data: Any = None
+        self.label: Any = None
         self.prepare()
 
-    def __getitem__(self, index):
+    def prepare(self) -> None:
+        pass
+
+    def __getitem__(self, index: int) -> tuple[Any, Any]:
         assert np.isscalar(index)
         if self.label is None:
             return self.transform(self.data[index]), None
         else:
-            return self.transform(self.data[index]),\
-                   self.target_transform(self.label[index])
+            return self.transform(self.data[index]), self.target_transform(self.label[index])
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.data)
-
-    def prepare(self):
-        pass
 
 
 def get_spiral(train: bool= True) -> tuple[np.ndarray, np.ndarray]:
