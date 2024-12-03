@@ -1,74 +1,71 @@
 if "__file__" in globals():
     import os, sys
     sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
-
-import math
 import numpy as np
-import dezero
+from dezero import Variable, no_grad
+from dezero.datasets import Spiral
 from dezero.models import MLP
-from dezero import optimizers
 import dezero.functions as F
-from dezero import transforms
+import dezero.optimizers as O
+import matplotlib.pyplot as plt
+
+
+def plot_data(xs: np.ndarray, ys: np.ndarray, ts: np.ndarray, model: MLP|None =None) -> None:
+    markers: list[str] = ["x", "o", "^"]
+    plt.figure(figsize=(7, 5))
+    if model is not None:
+        xx, yy = np.meshgrid(np.linspace(-1, 1, 1000), np.linspace(-1 ,1, 1000))
+        with no_grad():
+            z: Variable = model(np.c_[xx.ravel(), yy.ravel()]).data.argmax(axis=1).reshape(xx.shape)
+        plt.contourf(xx, yy, z, cmap=plt.cm.viridis)
+    for i in np.unique(ts):
+        plt.scatter(xs[ts == i], ys[ts == i], label=i, marker=markers[i])
+    plt.show()
+
+def plot_loss(losses: np.ndarray) -> None:
+    plt.xlabel("epoch")
+    plt.ylabel("loss")
+    plt.plot(losses)
+    plt.show()
 
 
 if __name__ == "__main__":
-    train_set = dezero.datasets.Spiral(train=True)
-    print(train_set[0])
-    print(len(train_set))
+    rng: np.random.Generator = np.random.default_rng()
 
-    train_set = dezero.datasets.Spiral()
-    batch_index = [0, 1, 2]
-    batch = [train_set[i] for i in batch_index]
-    x = np.array([example[0] for example in batch])
-    t = np.array([example[1] for example in batch])
-    print(x.shape)
-    print(t.shape)
+    hidden_size: int = 10
+    lr: float = 1.0
 
+    train_set = Spiral()
+    model = MLP((hidden_size, 3))
+    opt = O.SGD(lr).setup(model)
 
-    max_epoch = 300
-    batch_size = 30
-    hidden_size = 10
-    lr = 1.0
-
-    train_set = dezero.datasets.Spiral()
-    model = MLP((hidden_size, 10))
-    optimizer = optimizers.SGD(lr).setup(model)
-
-    data_size = len(train_set)
-    max_iter = math.ceil(data_size / batch_size)
+    max_epoch: int = 300
+    data_size: int = len(train_set)
+    batch_size: int = 30
+    max_iter: int = data_size // batch_size + int(data_size % batch_size != 0)
+    losses: np.ndarray = np.zeros(max_epoch)
 
     for epoch in range(max_epoch):
-        index = np.random.permutation(data_size)
-        sum_loss = 0
+        index: np.ndarray = rng.permutation(data_size)
+        sum_loss: float = 0
 
         for i in range(max_iter):
-            batch_index = index[i*batch_size : (i+1)*batch_size]
-            batch = [train_set[i] for i in batch_index]
-            batch_x = np.array([example[0] for example in batch])
-            batch_t = np.array([example[1] for example in batch])
+            indexes: np.ndarray = index[i*batch_size:(i+1)*batch_size]
+            xs: np.ndarray = np.array([train_set[i][0] for i in indexes])
+            ts: np.ndarray = np.array([train_set[i][1] for i in indexes])
 
-            y = model(batch_x)
-            loss = F.softmax_cross_entropy(y, batch_t)
+            loss: Variable = F.softmax_cross_entropy(model(xs), ts)
             model.cleargrads()
             loss.backward()
-            optimizer.update()
+            opt.update()
+            sum_loss += float(loss.data) * batch_size
 
-            sum_loss += float(loss.data) * len(batch_t)
+        print(f"epoch {epoch+1}, loss {sum_loss/data_size:.2f}")
+        losses[epoch] = sum_loss
 
-        avg_loss = sum_loss / data_size
-        print(f"epoch {epoch+1}, loss={avg_loss:.2f}")
+    plot_loss(losses)
 
-
-    def f(x):
-        y = x / 2.0
-        return y
-
-    train_set = dezero.datasets.Spiral(transform=f)
-
-
-    f = transforms.Normalize(mean=0.0, std=2.0)
-    train_set = dezero.datsets.Spiral(transform=F)
-
-
-    f = transforms.Compose([transforms.Normalize(mean=0.0, std=2.0),
-                            transforms.AsType(np.float64)])
+    test_set = Spiral(train=False)
+    xs = np.array([test_set[i][0] for i in indexes])
+    ts = np.array([test_set[i][1] for i in indexes])
+    plot_data(xs[:, 0], xs[:, 1], ts, model)
