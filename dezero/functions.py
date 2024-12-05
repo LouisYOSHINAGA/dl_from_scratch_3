@@ -225,6 +225,18 @@ def softmax_simple(x: np.ndarray|Variable, axis: int =1) -> Variable:
     return y / sum(y, axis=axis, keepdims=True)
 
 
+class ReLU(Function):
+    def forward(self, x: np.ndarray) -> np.ndarray:
+        return np.maximum(x, 0.0)
+
+    def backward(self, gy: Variable) -> Variable:
+        x, = self.inputs
+        return gy * (x.data > 0)
+
+def relu(x: Variable) -> Variable:
+    return ReLU()(x)
+
+
 class MeanSquaredError(Function):
     def forward(self, x0: np.ndarray, x1: np.ndarray) -> np.ndarray:
         diff: Variable = x0 - x1

@@ -1,21 +1,17 @@
 import numpy as np
 try:
-    import Image # type: ignore
+    import Image  # type: ignore
 except ImportError:
     from PIL import Image
 from dezero.utils import pair
+from typing import Callable, Any
 
 
 class Compose:
-    """Compose several transforms.
+    def __init__(self, transforms: list[Callable[[Any], Any]] =[]):
+        self.transforms: list[Callable[[Any], Any]] = transforms
 
-    Args:
-        transforms (list): list of transforms
-    """
-    def __init__(self, transforms=[]):
-        self.transforms = transforms
-
-    def __call__(self, img):
+    def __call__(self, img: Any) -> Any:
         if not self.transforms:
             return img
         for t in self.transforms:
@@ -23,16 +19,13 @@ class Compose:
         return img
 
 
-# =============================================================================
-# Transforms for PIL Image
-# =============================================================================
 class Convert:
-    def __init__(self, mode='RGB'):
-        self.mode = mode
+    def __init__(self, mode: str ='RGB') -> None:
+        self.mode: str = mode
 
-    def __call__(self, img):
+    def __call__(self, img: Image.Image) -> Image.Image:
         if self.mode == 'BGR':
-            img = img.convert('RGB')
+            img: Image.Image = img.convert('RGB')
             r, g, b = img.split()
             img = Image.merge('RGB', (b, g, r))
             return img
@@ -41,46 +34,33 @@ class Convert:
 
 
 class Resize:
-    """Resize the input PIL image to the given size.
+    def __init__(self, size: int, mode: int =Image.BILINEAR) -> None:
+        self.size: tuple[int, int] = pair(size)
+        self.mode: int = mode
 
-    Args:
-        size (int or (int, int)): Desired output size
-        mode (int): Desired interpolation.
-    """
-    def __init__(self, size, mode=Image.BILINEAR):
-        self.size = pair(size)
-        self.mode = mode
-
-    def __call__(self, img):
+    def __call__(self, img: Image.Image) -> Image.Image:
         return img.resize(self.size, self.mode)
 
 
 class CenterCrop:
-    """Resize the input PIL image to the given size.
-
-    Args:
-        size (int or (int, int)): Desired output size.
-        mode (int): Desired interpolation.
-    """
-    def __init__(self, size):
+    def __init__(self, size: int) -> None:
         self.size = pair(size)
 
-    def __call__(self, img):
+    def __call__(self, img: Image.Image) -> Image.Image:
         W, H = img.size
         OW, OH = self.size
-        left = (W - OW) // 2
-        right = W - ((W - OW) // 2 + (W - OW) % 2)
-        up = (H - OH) // 2
-        bottom = H - ((H - OH) // 2 + (H - OH) % 2)
+        left: int = (W - OW) // 2
+        right: int = W - ((W - OW) // 2 + (W - OW) % 2)
+        up: int = (H - OH) // 2
+        bottom: int = H - ((H - OH) // 2 + (H - OH) % 2)
         return img.crop((left, up, right, bottom))
 
 
 class ToArray:
-    """Convert PIL Image to NumPy array."""
-    def __init__(self, dtype=np.float32):
-        self.dtype = dtype
+    def __init__(self, dtype: np.dtype =np.float32) -> None:
+        self.dtype: np.dtype = dtype
 
-    def __call__(self, img):
+    def __call__(self, img: np.ndarray|Image.Image) -> np.ndarray:
         if isinstance(img, np.ndarray):
             return img
         if isinstance(img, Image.Image):
@@ -93,8 +73,7 @@ class ToArray:
 
 
 class ToPIL:
-    """Convert NumPy array to PIL Image."""
-    def __call__(self, array):
+    def __call__(self, array: np.ndarray) -> Image.Image:
         data = array.transpose(1, 2, 0)
         return Image.fromarray(data)
 
@@ -103,47 +82,35 @@ class RandomHorizontalFlip:
     pass
 
 
-# =============================================================================
-# Transforms for NumPy ndarray
-# =============================================================================
 class Normalize:
-    """Normalize a NumPy array with mean and standard deviation.
+    def __init__(self, mean: float|np.ndarray =0, std: float|np.ndarray =1) -> None:
+        self.mean: float|np.ndarray = mean
+        self.std: float|np.ndarray = std
 
-    Args:
-        mean (float or sequence): mean for all values or sequence of means for
-         each channel.
-        std (float or sequence):
-    """
-    def __init__(self, mean=0, std=1):
-        self.mean = mean
-        self.std = std
-
-    def __call__(self, array):
-        mean, std = self.mean, self.std
-
+    def __call__(self, array: np.ndarray) -> np.ndarray:
+        mean: float|np.ndarray = self.mean
+        std: float|np.ndarray = self.std
         if not np.isscalar(mean):
             mshape = [1] * array.ndim
-            mshape[0] = len(array) if len(self.mean) == 1 else len(self.mean)
-            mean = np.array(self.mean, dtype=array.dtype).reshape(*mshape)
+            mshape[0] = len(array) if len(mean) == 1 else len(mean)
+            mean = np.array(mean, dtype=array.dtype).reshape(*mshape)
         if not np.isscalar(std):
             rshape = [1] * array.ndim
-            rshape[0] = len(array) if len(self.std) == 1 else len(self.std)
-            std = np.array(self.std, dtype=array.dtype).reshape(*rshape)
+            rshape[0] = len(array) if len(std) == 1 else len(std)
+            std = np.array(std, dtype=array.dtype).reshape(*rshape)
         return (array - mean) / std
 
 
 class Flatten:
-    """Flatten a NumPy array.
-    """
-    def __call__(self, array):
+    def __call__(self, array: np.ndarray) -> np.ndarray:
         return array.flatten()
 
 
 class AsType:
-    def __init__(self, dtype=np.float32):
+    def __init__(self, dtype: np.dtype =np.float32) -> None:
         self.dtype = dtype
 
-    def __call__(self, array):
+    def __call__(self, array: np.ndarray) -> np.ndarray:
         return array.astype(self.dtype)
 
 
@@ -151,5 +118,5 @@ ToFloat = AsType
 
 
 class ToInt(AsType):
-    def __init__(self, dtype=int):
-        self.dtype = dtype
+    def __init__(self, dtype: np.dtype =int) -> None:
+        self.dtype: np.dtype = dtype
