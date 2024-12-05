@@ -1,5 +1,5 @@
 import numpy as np
-from dezero.core import as_variable, Variable, Function
+from dezero.core import as_array, as_variable, Variable, Function
 from dezero import utils
 
 
@@ -314,3 +314,11 @@ class Clip(Function):
 
 def clip(x: Variable, x_min: float, x_max: float) -> Variable:
     return Clip(x_min, x_max)(x)
+
+
+def accuracy(ys: np.ndarray|Variable, ts: np.ndarray|Variable) -> Variable:
+    ys = as_variable(ys)
+    ts = as_variable(ts)
+    pred: np.ndarray = ys.data.argmax(axis=1).reshape(ts.shape)
+    acc: float = (pred == ts.data).mean()
+    return Variable(as_array(acc))

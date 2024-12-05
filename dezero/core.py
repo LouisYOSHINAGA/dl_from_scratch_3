@@ -154,11 +154,6 @@ class Variable:
     def sum(self, axis: int|None =None, keepdims: bool =False) -> Variable:
         return dezero.functions.sum(self, axis, keepdims)
 
-def as_array(x: Scalar|np.ndarray) -> np.ndarray:
-    if np.isscalar(x):
-        return np.array(x)
-    return x
-
 
 class Parameter(Variable):
     pass
@@ -186,6 +181,11 @@ class Function:
 
     def backward(self, gys: list[Variable]) -> list[Variable]:
         raise NotImplementedError()
+
+def as_array(x: Scalar|np.ndarray) -> np.ndarray:
+    if np.isscalar(x):
+        return np.array(x)
+    return x
 
 def as_variable(obj: Variable|np.ndarray) -> Variable:
     if isinstance(obj, Variable):

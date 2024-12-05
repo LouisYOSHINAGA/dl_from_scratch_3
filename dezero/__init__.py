@@ -21,6 +21,7 @@ else:
     from dezero.core import setup_variable
 
     import dezero.datasets
+    import dezero.dataloaders
     import dezero.functions
     import dezero.utils
 
