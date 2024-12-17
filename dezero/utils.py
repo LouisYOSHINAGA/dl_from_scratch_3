@@ -132,7 +132,7 @@ def show_progress(block_num: int, block_size: int, total_size: int) -> None:
     i: int = int(downloaded / total_size * 30)
     if i >= 30:
         i = 30
-    print(f"\r[{'#'*i}] {'.'*(30-i):.2f}%")
+    print(f"\r{'#'*i} {'.'*(30-i)} {p:.2f}%")
 
 def pair(x: int|tuple[Any]) -> tuple[Any]:
     if isinstance(x, int):

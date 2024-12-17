@@ -66,7 +66,8 @@ class Linear(Layer):
     def _init_W(self) -> None:
         I: int = self.in_size
         O: int = self.out_size
-        self.W.data = xpy.random.default_rng().random(size=(I, O)).astype(self.dtype) * xpy.sqrt(1/I)
+        self.W.data = xpy.array(np.random.default_rng().random(size=(I, O)).astype(self.dtype)) \
+                    * xpy.sqrt(1/I)
 
     def forward(self, x: xpndarray) -> xpndarray:
         if self.W.data is None:

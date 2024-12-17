@@ -41,7 +41,7 @@ class DataLoader:
         self.gpu = False
 
     def to_gpu(self) -> None:
-        self.cpu = True
+        self.gpu = True
 
 
 class SeqDataLoader(DataLoader):
