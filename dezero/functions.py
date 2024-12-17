@@ -1,11 +1,12 @@
 import numpy as np
 from dezero.core import as_array, as_variable, Variable, Function
 from dezero import utils
+from dezero.cuda import xpy, xpndarray
 
 
 class Sin(Function):
-    def forward(self, x: np.ndarray) -> np.ndarray:
-        return np.sin(x)
+    def forward(self, x: xpndarray) -> xpndarray:
+        return xpy.sin(x)
 
     def backward(self, gy: Variable) -> Variable:
         x, = self.inputs
@@ -16,8 +17,8 @@ def sin(x: Variable) -> Variable:
 
 
 class Cos(Function):
-    def forward(self, x: np.ndarray) -> np.ndarray:
-        return np.cos(x)
+    def forward(self, x: xpndarray) -> xpndarray:
+        return xpy.cos(x)
 
     def backward(self, gy: Variable) -> Variable:
         x, = self.inputs
@@ -28,8 +29,8 @@ def cos(x: Variable) -> Variable:
 
 
 class Tanh(Function):
-    def forward(self, x: np.ndarray) -> np.ndarray:
-        return np.tanh(x)
+    def forward(self, x: xpndarray) -> xpndarray:
+        return xpy.tanh(x)
 
     def backward(self, gy: Variable) -> Variable:
         y: Variable = self.outputs[0]()
@@ -40,8 +41,8 @@ def tanh(x: Variable) -> Variable:
 
 
 class Exp(Function):
-    def forward(self, x: np.ndarray) -> np.ndarray:
-        return np.exp(x)
+    def forward(self, x: xpndarray) -> xpndarray:
+        return xpy.exp(x)
 
     def backward(self, gy: Variable) -> Variable:
         return gy * self.outputs[0]()
@@ -51,8 +52,8 @@ def exp(x: Variable) -> Variable:
 
 
 class Log(Function):
-    def forward(self, x: np.ndarray) -> np.ndarray:
-        return np.log(x)
+    def forward(self, x: xpndarray) -> xpndarray:
+        return xpy.log(x)
 
     def backward(self, gy: Variable) -> Variable:
         x, = self.inputs
@@ -66,7 +67,7 @@ class Reshape(Function):
     def __init__(self, shape: tuple[int, ...]) -> None:
         self.shape: tuple[int, ...] = shape
 
-    def forward(self, x: np.ndarray) -> np.ndarray:
+    def forward(self, x: xpndarray) -> xpndarray:
         self.x_shape: tuple[int, ...] = x.shape
         return x.reshape(self.shape)
 
@@ -83,14 +84,14 @@ class Transpose(Function):
     def __init__(self, axes: tuple[int, ...]|None =None) -> None:
         self.axes: tuple[int, ...]|None = axes
 
-    def forward(self, x: np.ndarray) -> np.ndarray:
+    def forward(self, x: xpndarray) -> xpndarray:
         return x.transpose(self.axes)
 
     def backward(self, gy: Variable) -> Variable:
         if self.axes is None:
             return transpose(gy)
         inv_axes: tuple[int, ...] = tuple(
-            np.argsort([ax % len(self.axes) for ax in self.axes])
+            xpy.argsort([ax % len(self.axes) for ax in self.axes])
         )
         return transpose(gy, inv_axes)
 
@@ -103,7 +104,7 @@ class Sum(Function):
         self.axis: int|None = axis
         self.keepdims: bool = keepdims
 
-    def forward(self, x: np.ndarray) -> np.ndarray:
+    def forward(self, x: xpndarray) -> xpndarray:
         self.x_shape: tuple[int, ...] = x.shape
         return x.sum(axis=self.axis, keepdims=self.keepdims)
 
@@ -119,9 +120,9 @@ class BroadCastTo(Function):
     def __init__(self, shape: tuple[int, ...]) -> None:
         self.shape: tuple[int, ...] = shape
 
-    def forward(self, x: np.ndarray) -> np.ndarray:
+    def forward(self, x: xpndarray) -> xpndarray:
         self.x_shape: tuple[int, ...] = x.shape
-        return np.broadcast_to(x, self.shape)
+        return xpy.broadcast_to(x, self.shape)
 
     def backward(self, gy: Variable) -> Variable:
         return sum_to(gy, self.x_shape)
@@ -136,7 +137,7 @@ class SumTo(Function):
     def __init__(self, shape: tuple[int, ...]) -> None:
         self.shape: tuple[int, ...] = shape
 
-    def forward(self, x: np.ndarray) -> np.ndarray:
+    def forward(self, x: xpndarray) -> xpndarray:
         self.x_shape: tuple[int, ...] = x.shape
         return utils.sum_to(x, self.shape)
 
@@ -150,7 +151,7 @@ def sum_to(x: Variable, shape: tuple[int, ...]) -> Variable:
 
 
 class MatMul(Function):
-    def forward(self, x: np.ndarray, W: np.ndarray) -> np.ndarray:
+    def forward(self, x: xpndarray, W: xpndarray) -> xpndarray:
         return x.dot(W)
 
     def backward(self, gy: Variable) -> list[Variable]:
@@ -164,8 +165,8 @@ def matmul(x: Variable, W: Variable) -> Variable:
 
 
 class Linear(Function):
-    def forward(self, x: np.ndarray, W: np.ndarray, b: np.ndarray|None) -> np.ndarray:
-        y: np.ndarray = x.dot(W)
+    def forward(self, x: xpndarray, W: xpndarray, b: xpndarray|None) -> xpndarray:
+        y: xpndarray = x.dot(W)
         if b is not None:
             y += b
         return y
@@ -180,7 +181,7 @@ class Linear(Function):
 def linear(x: Variable, W: Variable, b: Variable|None) -> Variable:
     return Linear()(x, W, b)
 
-def linear_simple(x: np.ndarray|Variable, W: np.ndarray|Variable, b: np.ndarray|Variable|None =None) -> Variable:
+def linear_simple(x: xpndarray|Variable, W: xpndarray|Variable, b: xpndarray|Variable|None =None) -> Variable:
     x = as_variable(x)
     W = as_variable(W)
     t: Variable = matmul(x, W)
@@ -192,8 +193,8 @@ def linear_simple(x: np.ndarray|Variable, W: np.ndarray|Variable, b: np.ndarray|
 
 
 class Sigmoid(Function):
-    def forward(self, x: np.ndarray) -> np.ndarray:
-        return 0.5 + 0.5 * np.tanh(0.5 * x)
+    def forward(self, x: xpndarray) -> xpndarray:
+        return 0.5 + 0.5 * xpy.tanh(0.5 * x)
 
     def backward(self, gy: Variable) -> Variable:
         y: Variable = self.outputs[0]()
@@ -202,7 +203,7 @@ class Sigmoid(Function):
 def sigmoid(x: Variable) -> Variable:
     return Sigmoid()(x)
 
-def sigmoid_simple(x: np.ndarray|Variable) -> Variable:
+def sigmoid_simple(x: xpndarray|Variable) -> Variable:
     x = as_variable(x)
     return 1 / (1 + exp(-x))
 
@@ -211,23 +212,23 @@ class Softmax(Function):
     def __init__(self, axis: int =1) -> None:
         self.axis: int = axis
 
-    def forward(self, x: np.ndarray) -> np.ndarray:
+    def forward(self, x: xpndarray) -> xpndarray:
         y: Variable = x - x.max(axis=self.axis, keepdims=True)
-        y = np.exp(y)
+        y = xpy.exp(y)
         return y / y.sum(axis=self.axis, keepdims=True)
 
 def softmax(x: Variable, axis: int =1) -> Variable:
     return Softmax(axis)(x)
 
-def softmax_simple(x: np.ndarray|Variable, axis: int =1) -> Variable:
+def softmax_simple(x: xpndarray|Variable, axis: int =1) -> Variable:
     x = as_variable(x)
     y: Variable = exp(x)
     return y / sum(y, axis=axis, keepdims=True)
 
 
 class ReLU(Function):
-    def forward(self, x: np.ndarray) -> np.ndarray:
-        return np.maximum(x, 0.0)
+    def forward(self, x: xpndarray) -> xpndarray:
+        return xpy.maximum(x, 0.0)
 
     def backward(self, gy: Variable) -> Variable:
         x, = self.inputs
@@ -238,7 +239,7 @@ def relu(x: Variable) -> Variable:
 
 
 class MeanSquaredError(Function):
-    def forward(self, x0: np.ndarray, x1: np.ndarray) -> np.ndarray:
+    def forward(self, x0: xpndarray, x1: xpndarray) -> xpndarray:
         diff: Variable = x0 - x1
         return (diff ** 2).sum() / len(diff)
 
@@ -255,30 +256,30 @@ def mean_squared_error(x0: Variable, x1: Variable) -> Variable:
 
 
 class SoftmaxCrossEntropy(Function):
-    def forward(self, x: np.ndarray, t: np.ndarray) -> np.ndarray:
+    def forward(self, x: xpndarray, t: xpndarray) -> xpndarray:
         N: int = x.shape[0]
         log_p: Variable = x - utils.logsumexp(x, axis=1)
-        log_p = log_p[np.arange(N), t.ravel()]
-        return -log_p.sum() / np.float32(N)
+        log_p = log_p[xpy.arange(N), t.ravel()]
+        return -log_p.sum() / xpy.float32(N)
 
     def backward(self, gy: Variable) -> Variable:
         x, t = self.inputs
         N, CLS_NUM = x.shape
         gy /= N
         y: Variable = softmax(x)
-        t_onehot: np.ndarray = np.eye(CLS_NUM, dtype=t.dtype)[t.data]
+        t_onehot: xpndarray = xpy.eye(CLS_NUM, dtype=t.dtype)[t.data]
         return (y - t_onehot) * gy
 
 def softmax_cross_entropy(x: Variable, t: Variable) -> float:
     return SoftmaxCrossEntropy()(x, t)
 
-def softmax_cross_entropy_simple(x: np.ndarray|Variable, t: np.ndarray|Variable) -> float:
+def softmax_cross_entropy_simple(x: xpndarray|Variable, t: xpndarray|Variable) -> float:
     x = as_variable(x)
     t = as_variable(t)
     N: int = x.shape[0]
     p: Variable = clip(softmax_simple(x), 1e-15, 1.0)
     log_p: Variable = log(p)
-    tlog_q: Variable = log_p[np.arange(N), t.data]
+    tlog_q: Variable = log_p[xpy.arange(N), t.data]
     return - sum(tlog_q) / N
 
 
@@ -286,7 +287,7 @@ class GetItem(Function):
     def __init__(self, slices: int|tuple[int, ...]) -> None:
         self.slices: int|tuple[int, ...] = slices
 
-    def forward(self, x: np.ndarray) -> np.ndarray:
+    def forward(self, x: xpndarray) -> xpndarray:
         return x[self.slices]
 
     def backward(self, gy: Variable) -> Variable:
@@ -303,8 +304,8 @@ class GetItemGrad(Function):
         self.in_shape: int|tuple[int, ...] = in_shape
 
     def forward(self, gy: Variable) -> Variable:
-        gx: np.ndarray = np.zeros(self.in_shape)
-        np.add.at(gx, self.slices, gy)
+        gx: xpndarray = xpy.zeros(self.in_shape)
+        xpy.add.at(gx, self.slices, gy)
         return gx
 
     def backward(self, ggx: Variable) -> Variable:
@@ -316,8 +317,8 @@ class Clip(Function):
         self.x_min: float = x_min
         self.x_max: float = x_max
 
-    def forward(self, x: np.ndarray) -> np.ndarray:
-        return np.clip(x, self.x_min, self.x_max)
+    def forward(self, x: xpndarray) -> xpndarray:
+        return xpy.clip(x, self.x_min, self.x_max)
 
     def backward(self, gy: Variable) -> Variable:
         x, = self.inputs
@@ -328,9 +329,9 @@ def clip(x: Variable, x_min: float, x_max: float) -> Variable:
     return Clip(x_min, x_max)(x)
 
 
-def accuracy(ys: np.ndarray|Variable, ts: np.ndarray|Variable) -> Variable:
+def accuracy(ys: xpndarray|Variable, ts: xpndarray|Variable) -> Variable:
     ys = as_variable(ys)
     ts = as_variable(ts)
-    pred: np.ndarray = ys.data.argmax(axis=1).reshape(ts.shape)
+    pred: xpndarray = ys.data.argmax(axis=1).reshape(ts.shape)
     acc: float = (pred == ts.data).mean()
     return Variable(as_array(acc))

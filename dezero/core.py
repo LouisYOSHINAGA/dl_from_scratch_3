@@ -5,8 +5,13 @@ import contextlib
 import dezero
 from typing import TypeAlias, Generator, Callable, Any, Self
 
-
-Scalar: TypeAlias = int | float | np.ndarray
+try:
+    import cupy as cp  # type: ignore
+    array_types: tuple[Any] = (np.ndarray, cp.ndarray)
+    Scalar: TypeAlias = int | float | np.ndarray | cp.ndarray
+except:
+    array_types = (np.ndarray)
+    Scalar: TypeAlias = int | float | np.ndarray
 
 
 class Config:
@@ -28,12 +33,12 @@ def no_grad() -> None:
 class Variable:
     __array_priority__ = 200
 
-    def __init__(self, data: np.ndarray, name: str|None =None) -> None:
+    def __init__(self, data: dezero.cuda.xpndarray, name: str|None =None) -> None:
         if data is not None:
-            if not isinstance(data, np.ndarray):
+            if not isinstance(data, array_types):
                 raise TypeError(f"{type(data)} is not supported.")
         self.name: str = name
-        self.data: np.ndarray = data
+        self.data: dezero.cuda.xpndarray = data
         self.grad: Self|None = None
         self.creator: Callable[[Any], Self]|None = None
         self.generation: int = 0
@@ -51,7 +56,7 @@ class Variable:
         return self.data.size
 
     @property
-    def dtype(self) -> np.dtype:
+    def dtype(self) -> dezero.cuda.xpy.dtype:
         return self.data.dtype
 
     def __len__(self) -> int:
@@ -105,7 +110,8 @@ class Variable:
                 s.grad = p.backward(u.grad)             // dL/ds = dL/du * du/ds
         """
         if self.grad is None:
-            self.grad = Variable(np.ones_like(self.data))
+            xp: dezero.cuda.xpy = dezero.cuda.get_array_module(self.data)
+            self.grad = Variable(xp.ones_like(self.data))
 
         funcs: list[Callable[[Any], Self]] = []
         seen_set: set[Callable[[Any], Self]] = set()
@@ -120,10 +126,10 @@ class Variable:
 
         while funcs:
             f: Callable[[Any], Self] = funcs.pop()
-            gys: list[np.ndarray] = [output().grad for output in f.outputs]
+            gys: list[dezero.cuda.xpndarray] = [output().grad for output in f.outputs]
 
             with using_config("enable_backprop", create_graph):
-                gxs: list[np.ndarray]|np.ndarray = f.backward(*gys)
+                gxs: list[dezero.cuda.xpndarray]|dezero.cuda.xpndarray = f.backward(*gys)
             if not isinstance(gxs, list):
                 gxs = [gxs]
 
@@ -154,16 +160,24 @@ class Variable:
     def sum(self, axis: int|None =None, keepdims: bool =False) -> Variable:
         return dezero.functions.sum(self, axis, keepdims)
 
+    def to_cpu(self) -> None:
+        if self.data is not None:
+            self.data = dezero.cuda.as_numpy(self.data)
+
+    def to_gpu(self) -> None:
+        if self.data is not None:
+            self.data = dezero.cuda.as_cupy(self.data)
+
 
 class Parameter(Variable):
     pass
 
 
 class Function:
-    def __call__(self, *inputs: Variable|np.ndarray) -> list[Variable]|Variable:
+    def __call__(self, *inputs: Variable|dezero.cuda.xpndarray) -> list[Variable]|Variable:
         vinputs: list[Variable] = [as_variable(x) for x in inputs]
-        xs: list[np.ndarray] = [x.data for x in vinputs]
-        ys: list[np.ndarray]|np.ndarray = self.forward(*xs)
+        xs: list[dezero.cuda.xpndarray] = [x.data for x in vinputs]
+        ys: list[dezero.cuda.xpndarray]|dezero.cuda.xpndarray = self.forward(*xs)
         if not isinstance(ys, list):
             ys = [ys]
 
@@ -176,25 +190,25 @@ class Function:
                 output.set_creator(self)
         return outputs if len(outputs) > 1 else outputs[0]
 
-    def forward(self, xs: list[np.ndarray]) -> list[np.ndarray]:
+    def forward(self, xs: list[dezero.cuda.xpndarray]) -> list[dezero.cuda.xpndarray]:
         raise NotImplementedError()
 
     def backward(self, gys: list[Variable]) -> list[Variable]:
         raise NotImplementedError()
 
-def as_array(x: Scalar|np.ndarray) -> np.ndarray:
+def as_array(x: Scalar, array_module: dezero.cuda.xpy =np) -> dezero.cuda.xpndarray:
     if np.isscalar(x):
-        return np.array(x)
+        return array_module.array(x)
     return x
 
-def as_variable(obj: Variable|np.ndarray) -> Variable:
+def as_variable(obj: Variable|dezero.cuda.xpndarray) -> Variable:
     if isinstance(obj, Variable):
         return obj
     return Variable(obj)
 
 
 class Neg(Function):
-    def forward(self, x: np.ndarray) -> np.ndarray:
+    def forward(self, x: dezero.cuda.xpndarray) -> dezero.cuda.xpndarray:
         return -x
 
     def backward(self, gy: Variable) -> Variable:
@@ -205,7 +219,7 @@ def neg(x: Variable) -> Variable:
 
 
 class Add(Function):
-    def forward(self, x0: np.ndarray, x1: np.ndarray) -> np.ndarray:
+    def forward(self, x0: dezero.cuda.xpndarray, x1: dezero.cuda.xpndarray) -> dezero.cuda.xpndarray:
         self.x0_shape: tuple[int, ...] = x0.shape
         self.x1_shape: tuple[int, ...] = x1.shape
         return x0 + x1
@@ -219,28 +233,28 @@ class Add(Function):
         return [gx0, gx1]
 
 def add(x0: Variable, x1: Scalar|Variable) -> Variable:
-    x1: np.ndarray = as_array(x1)
+    x1: dezero.cuda.xpndarray = as_array(x1, dezero.cuda.get_array_module(x0.data))
     return Add()(x0, x1)
 
 
 class Sub(Function):
-    def forward(self, x0: np.ndarray, x1: np.ndarray) -> np.ndarray:
+    def forward(self, x0: dezero.cuda.xpndarray, x1: dezero.cuda.xpndarray) -> dezero.cuda.xpndarray:
         return x0 - x1
 
     def backward(self, gy: Variable) -> list[Variable]:
         return [gy, -gy]
 
 def sub(x0: Variable, x1: Scalar|Variable) -> Variable:
-    x1: np.ndarray = as_array(x1)
+    x1: dezero.cuda.xpndarray = as_array(x1, dezero.cuda.get_array_module(x0.data))
     return Sub()(x0, x1)
 
 def rsub(x0: Variable, x1: Scalar|Variable) -> Variable:
-    x1: np.ndarray = as_array(x1)
+    x1: dezero.cuda.xpndarray = as_array(x1, dezero.cuda.get_array_module(x0.data))
     return Sub()(x1, x0)
 
 
 class Mul(Function):
-    def forward(self, x0: np.ndarray, x1: np.ndarray) -> np.ndarray:
+    def forward(self, x0: dezero.cuda.xpndarray, x1: dezero.cuda.xpndarray) -> dezero.cuda.xpndarray:
         return x0 * x1
 
     def backward(self, gy: Variable) -> list[Variable]:
@@ -248,12 +262,12 @@ class Mul(Function):
         return [gy*x1, gy*x0]
 
 def mul(x0: Variable, x1: Scalar|Variable) -> Variable:
-    x1: np.ndarray = as_array(x1)
+    x1: dezero.cuda.xpndarray = as_array(x1, dezero.cuda.get_array_module(x0.data))
     return Mul()(x0, x1)
 
 
 class Div(Function):
-    def forward(self, x0: np.ndarray, x1: np.ndarray) -> np.ndarray:
+    def forward(self, x0: dezero.cuda.xpndarray, x1: dezero.cuda.xpndarray) -> dezero.cuda.xpndarray:
         return x0 / x1
 
     def backward(self, gy: Variable) -> list[Variable]:
@@ -261,11 +275,11 @@ class Div(Function):
         return [gy/x1, gy*(-x0/x1**2)]
 
 def div(x0: Variable, x1: Scalar|Variable) -> Variable:
-    x1: np.ndarray = as_array(x1)
+    x1: dezero.cuda.xpndarray = as_array(x1, dezero.cuda.get_array_module(x0.data))
     return Div()(x0, x1)
 
 def rdiv(x0: Variable, x1: Scalar|Variable) -> Variable:
-    x1: np.ndarray = as_array(x1)
+    x1: dezero.cuda.xpndarray = as_array(x1, dezero.cuda.get_array_module(x0.data))
     return Div()(x1, x0)
 
 
@@ -273,7 +287,7 @@ class Pow(Function):
     def __init__(self, c: Scalar) -> None:
         self.c = c
 
-    def forward(self, x: np.ndarray) -> np.ndarray:
+    def forward(self, x: dezero.cuda.xpndarray) -> dezero.cuda.xpndarray:
         return x ** self.c
 
     def backward(self, gy: Variable) -> Variable:

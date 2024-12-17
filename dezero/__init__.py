@@ -20,6 +20,7 @@ else:
     from dezero.models import Model
     from dezero.core import setup_variable
 
+    import dezero.cuda
     import dezero.datasets
     import dezero.dataloaders
     import dezero.functions

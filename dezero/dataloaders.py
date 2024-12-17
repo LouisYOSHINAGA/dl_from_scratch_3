@@ -1,15 +1,17 @@
 import math
 import numpy as np
 from dezero.datasets import Dataset
+from dezero.cuda import cupy, xpy, xpndarray
 
 
 class DataLoader:
-    def __init__(self, dataset: Dataset, batch_size: int, shuffle: bool =True) -> None:
+    def __init__(self, dataset: Dataset, batch_size: int, shuffle: bool =True, gpu: bool =False) -> None:
         self.dataset: Dataset = dataset
         self.batch_size: int = batch_size
         self.shuffle: bool = shuffle
         self.data_size: int = len(dataset)
         self.max_iter: int = math.ceil(self.data_size / batch_size)
+        self.gpu: bool = gpu
         self.reset()
 
     def reset(self) -> None:
@@ -26,13 +28,20 @@ class DataLoader:
             raise StopIteration()
         batch_index: np.ndarray = self.index[self.iteration*self.batch_size:(self.iteration+1)*self.batch_size]
         batch: list[np.ndarray] = [self.dataset[i] for i in batch_index]
-        xs: np.ndarray = np.array([example[0] for example in batch])
-        ts: np.ndarray = np.array([example[1] for example in batch])
+        xp: xpy = cupy if self.gpu else np
+        xs: xpndarray = xp.array([example[0] for example in batch])
+        ts: xpndarray = xp.array([example[1] for example in batch])
         self.iteration += 1
         return xs, ts
 
-    def next(self) -> tuple[np.ndarray, np.ndarray]:
+    def next(self) -> tuple[xpndarray, xpndarray]:
         return self.__next__()
+
+    def to_cpu(self) -> None:
+        self.gpu = False
+
+    def to_gpu(self) -> None:
+        self.cpu = True
 
 
 class SeqDataLoader(DataLoader):

@@ -2,13 +2,13 @@ if "__file__" in globals():
     import os, sys
     sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 import time
-import dezero
 from dezero.core import Variable
 from dezero.datasets import Dataset, MNIST
-from dezero import DataLoader
+from dezero.dataloaders import DataLoader
 from dezero.models import MLP
 import dezero.functions as F
 import dezero.optimizers as O
+import dezero.cuda as cuda
 
 
 if __name__ == "__main__":
@@ -18,7 +18,7 @@ if __name__ == "__main__":
     model = MLP((1000, 10))
     opt = O.SGD().setup(model)
 
-    if dezero.cuda.gpu_enable:
+    if cuda.gpu_enable:
         train_loader.to_gpu()
         model.to_gpu()
 
