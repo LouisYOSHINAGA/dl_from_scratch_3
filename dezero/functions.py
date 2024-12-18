@@ -1,7 +1,8 @@
 import numpy as np
+import dezero
 from dezero.core import as_array, as_variable, Variable, Function
 from dezero import utils
-from dezero.cuda import xpy, xpndarray
+from dezero.cuda import xpy, xpndarray, get_array_module
 
 
 class Sin(Function):
@@ -335,3 +336,13 @@ def accuracy(ys: xpndarray|Variable, ts: xpndarray|Variable) -> Variable:
     pred: xpndarray = ys.data.argmax(axis=1).reshape(ts.shape)
     acc: float = (pred == ts.data).mean()
     return Variable(as_array(acc))
+
+
+def dropout(x: Variable, dropout_ratio: float =0.5) -> Variable:
+    x: Variable = as_variable(x)
+    if not dezero.Config.train:
+        return x
+    mask: xpndarray = xpy.array(np.random.default_rng().random(*x.shape) > dropout_ratio)
+    scale: xpndarray = xpy.array(1 - dropout_ratio).astype(x.dtype)
+    y: Variable = x * mask / scale
+    return y

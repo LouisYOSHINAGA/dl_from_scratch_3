@@ -16,6 +16,7 @@ except:
 
 class Config:
     enable_backprop: bool = True
+    train: bool = True
 
 @contextlib.contextmanager
 def using_config(name: str, value: bool) -> Generator[None, None, None]:
@@ -28,6 +29,9 @@ def using_config(name: str, value: bool) -> Generator[None, None, None]:
 
 def no_grad() -> None:
     return using_config("enable_backprop", False)
+
+def test_mode() -> None:
+    return using_config("train", False)
 
 
 class Variable:

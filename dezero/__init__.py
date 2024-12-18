@@ -11,6 +11,7 @@ if is_simple_core:
 else:
     from dezero.core import using_config
     from dezero.core import no_grad
+    from dezero.core import test_mode
     from dezero.core import Variable
     from dezero.core import as_array
     from dezero.core import Parameter
