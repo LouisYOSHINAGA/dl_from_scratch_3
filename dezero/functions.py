@@ -2,7 +2,7 @@ import numpy as np
 import dezero
 from dezero.core import as_array, as_variable, Variable, Function
 from dezero import utils
-from dezero.cuda import xpy, xpndarray, get_array_module
+from dezero.cuda import xpy, xpndarray
 
 
 class Sin(Function):

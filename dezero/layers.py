@@ -1,7 +1,7 @@
 import os
 import numpy as np
 import weakref
-from dezero.core import Parameter, Variable
+from dezero import Parameter, Variable
 import dezero.functions as F
 from dezero.cuda import xpy, xpndarray
 from typing import Any, Generator
