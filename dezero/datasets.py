@@ -66,7 +66,7 @@ class MNIST(Dataset):
                  target_transform: Callable[[Any], Any]|None =None) -> None:
         super().__init__(train, transform, target_transform)
 
-    def prepare(self):
+    def prepare(self) -> None:
         #url = 'http://yann.lecun.com/exdb/mnist/'
         url = 'https://ossci-datasets.s3.amazonaws.com/mnist/'
         train_files: dict[str, str] = {'target': 'train-images-idx3-ubyte.gz',

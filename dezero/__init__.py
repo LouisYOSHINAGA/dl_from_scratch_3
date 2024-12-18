@@ -19,11 +19,20 @@ else:
     from dezero.layers import Layer
     from dezero.models import Model
     from dezero.core import setup_variable
+    from dezero.core import Config
+    from dezero.layers import Layer
+    from dezero.models import Model
+    from dezero.datasets import Dataset
+    from dezero.dataloaders import DataLoader
+    from dezero.dataloaders import SeqDataLoader
 
     import dezero.cuda
     import dezero.datasets
     import dezero.dataloaders
+    import dezero.optimizers
     import dezero.functions
+    import dezero.layers
+    import dezero.transforms
     import dezero.utils
 
 setup_variable()
