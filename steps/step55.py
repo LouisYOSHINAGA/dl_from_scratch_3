@@ -1,13 +1,23 @@
-def get_conv_outsize(input_size, kernel_size, stride, pad):
+def get_conv_outsize(input_size: int, kernel_size: int, stride: int, pad: int) -> int:
     return (input_size + 2 * pad - kernel_size) // stride + 1
 
 
 if __name__ == "__main__":
-    H, W = 4, 4  # input size
-    KH, KW = 3, 3  # kernel shape
-    SH, SW = 1, 1  # stride
-    PH, PW = 1, 1  # padding
+    insize_w: int = 4
+    insize_h: int = 4
+    kernel_w: int = 3
+    kernel_h: int = 3
+    stride_w: int = 1
+    stride_h: int = 1
+    padding_w: int = 1
+    padding_h: int = 1
 
-    OH = get_conv_outsize(H, KH, SH, PH)
-    OW = get_conv_outsize(W, KW, SW, PW)
-    print(OH, OW)
+    outsize_w: int = get_conv_outsize(input_size=insize_w,
+                                      kernel_size=kernel_w,
+                                      stride=stride_w,
+                                      pad=padding_w)
+    outsize_h: int = get_conv_outsize(input_size=insize_h,
+                                      kernel_size=kernel_h,
+                                      stride=stride_h,
+                                      pad=padding_h)
+    print(f"outsize width = {outsize_w}, height = {outsize_h}")

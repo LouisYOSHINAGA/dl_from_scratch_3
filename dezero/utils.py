@@ -144,7 +144,7 @@ def pair(x: int|tuple[Any]) -> tuple[Any]:
         raise ValueError
 
 
-def get_conv_outsize(input_size, kernel_size, stride, pad):
+def get_conv_outsize(input_size: int, kernel_size: int, stride: int, pad: int) -> int:
     return (input_size + 2 * pad - kernel_size) // stride + 1
 
 def get_deconv_outsize(size, k, s, p):
