@@ -21,7 +21,7 @@ def im2col_array(img: xpndarray, kernel_size: int|tuple[int, int], stride: int|t
         img: np.ndarray = np.pad(img,
                                  ((0, 0), (0, 0), (PH, PH + SH - 1), (PW, PW + SW - 1)),
                                  mode='constant', constant_values=(0,))
-        col = np.array((N, C, KH, KW, OH, OW), dtype=img.dtype)
+        col = np.ndarray((N, C, KH, KW, OH, OW), dtype=img.dtype)
 
         for j in range(KH):
             j_lim: int = j + SH * OH
