@@ -3,7 +3,8 @@ import numpy as np
 import weakref
 from dezero import Parameter, Variable
 import dezero.functions as F
-from dezero.cuda import xpy, xpndarray
+from dezero.utils import pair
+from dezero.cuda import xpy, xpndarray, get_array_module
 from typing import Any, Generator
 
 
@@ -107,3 +108,73 @@ class Linear(Layer):
             self.in_size = x.shape[1]
             self._init_W()
         return F.linear(x, self.W, self.b)
+
+
+class Conv2d(Layer):
+    def __init__(self, out_channels: int, kernel_size: int|tuple[int, int],
+                 stride: int|tuple[int, int] =1, pad: int|tuple[int, int] =0,
+                 nobias: bool =False, dtype: xpy.dtype =np.float32,
+                 in_channles: int|None =None) -> None:
+        super().__init__()
+        self.in_channels: int|None = in_channles
+        self.out_channels: int = out_channels
+        self.kernel_size: int|tuple[int, int] = kernel_size
+        self.stride: int|tuple[int, int] = stride
+        self.pad: int|tuple[int, int] = pad
+        self.dtype: xpy.dtype = dtype
+
+        self.W = Parameter(None, name="W")
+        if in_channles is not None:
+            self._init_W()
+        self.b: Parameter|None = None if nobias \
+                                 else Parameter(np.zeros(out_channels, dtype=dtype), name="b")
+
+    def _init_W(self, xp: xpy =np) -> None:
+        C: int|None = self.in_channels
+        OC: int = self.out_channels
+        KH, KW = pair(self.kernel_size)
+        self.W.data = xp.array(
+            np.sqrt(1 / (C * KH * KW))
+            * np.random.default_rng().normal(size=(OC, C, KH, KW)).astype(self.dtype)
+        )
+
+    def forward(self, x: xpndarray) -> xpndarray:
+        if self.W.data is None:
+            self.in_channels = x.shape[1]
+            self._init_W(get_array_module(x))
+        return F.conv2d(x, self.W, self.b, self.stride, self.pad)
+
+
+class Deconv2d(Layer):
+    def __init__(self, out_channels: int, kernel_size: int|tuple[int, int],
+                 stride: int|tuple[int, int] =1, pad: int|tuple[int, int] =0,
+                 nobias: bool =False, dtype: xpy.dtype =np.float32,
+                 in_channles: int|None =None) -> None:
+        super().__init__()
+        self.in_channels: int|None = in_channles
+        self.out_channels: int = out_channels
+        self.kernel_size: int|tuple[int, int] = kernel_size
+        self.stride: int|tuple[int, int] = stride
+        self.pad: int|tuple[int, int] = pad
+        self.dtype: xpy.dtype = dtype
+
+        self.W = Parameter(None, name="W")
+        if in_channles is not None:
+            self._init_W()
+        self.b: Parameter|None = None if nobias \
+                                 else Parameter(np.zeros(out_channels, dtype=dtype), name="b")
+
+    def _init_W(self, xp: xpy =np) -> None:
+        C: int|None = self.in_channels
+        OC: int = self.out_channels
+        KH, KW = pair(self.kernel_size)
+        self.W.data = xp.array(
+            np.sqrt(1 / (C * KH * KW))
+            * np.random.default_rng().normal(size=(C, OC, KH, KW)).astype(self.dtype)
+        )
+
+    def forward(self, x: xpndarray) -> xpndarray:
+        if self.W.data is None:
+            self.in_channels = x.shape[1]
+            self._init_W(get_array_module(x))
+        return F.deconv2d(x, self.W, self.b, self.stride, self.pad)
