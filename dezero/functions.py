@@ -342,7 +342,7 @@ def dropout(x: Variable, dropout_ratio: float =0.5) -> Variable:
     x: Variable = as_variable(x)
     if not dezero.Config.train:
         return x
-    mask: xpndarray = xpy.array(np.random.default_rng().random(*x.shape) > dropout_ratio)
+    mask: xpndarray = xpy.array(np.random.default_rng().random(size=x.shape) > dropout_ratio)
     scale: xpndarray = xpy.array(1 - dropout_ratio).astype(x.dtype)
     y: Variable = x * mask / scale
     return y
