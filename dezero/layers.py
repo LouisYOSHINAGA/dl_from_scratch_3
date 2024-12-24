@@ -103,7 +103,7 @@ class Linear(Layer):
         self.W.data = xpy.array(np.random.default_rng().random(size=(I, O)).astype(self.dtype)) \
                     * xpy.sqrt(1/I)
 
-    def forward(self, x: xpndarray) -> xpndarray:
+    def forward(self, x: xpndarray) -> Variable:
         if self.W.data is None:
             self.in_size = x.shape[1]
             self._init_W()
@@ -138,7 +138,7 @@ class Conv2d(Layer):
             * np.random.default_rng().normal(size=(OC, C, KH, KW)).astype(self.dtype)
         )
 
-    def forward(self, x: xpndarray) -> xpndarray:
+    def forward(self, x: xpndarray) -> Variable:
         if self.W.data is None:
             self.in_channels = x.shape[1]
             self._init_W(get_array_module(x))
@@ -173,8 +173,25 @@ class Deconv2d(Layer):
             * np.random.default_rng().normal(size=(C, OC, KH, KW)).astype(self.dtype)
         )
 
-    def forward(self, x: xpndarray) -> xpndarray:
+    def forward(self, x: xpndarray) -> Variable:
         if self.W.data is None:
             self.in_channels = x.shape[1]
             self._init_W(get_array_module(x))
         return F.deconv2d(x, self.W, self.b, self.stride, self.pad)
+
+
+class RNN(Layer):
+    def __init__(self, hidden_size: int, in_size: int|None =None) -> None:
+        super().__init__()
+        self.x2h = Linear(hidden_size, in_size=in_size)
+        self.h2h = Linear(hidden_size, in_size=in_size, nobias=True)
+        self.h: Variable|None = None
+
+    def reset_state(self) -> None:
+        self.h = None
+
+    def forward(self, x: xpndarray) -> Variable:
+        h_new: Variable = F.tanh(self.x2h(x)) if self.h is None \
+                          else F.tanh(self.x2h(x) + self.h2h(self.h))
+        self.h = h_new
+        return h_new
