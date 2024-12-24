@@ -13,7 +13,7 @@ class Sin(Function):
         x, = self.inputs
         return gy * cos(x)
 
-def sin(x: Variable) -> Variable:
+def sin(x: Variable|xpndarray) -> Variable:
     return Sin()(x)
 
 
@@ -25,7 +25,7 @@ class Cos(Function):
         x, = self.inputs
         return - gy * sin(x)
 
-def cos(x: Variable) -> Variable:
+def cos(x: Variable|xpndarray) -> Variable:
     return Cos()(x)
 
 
@@ -37,7 +37,7 @@ class Tanh(Function):
         y: Variable = self.outputs[0]()
         return gy * (1 - y**2)
 
-def tanh(x: Variable) -> Variable:
+def tanh(x: Variable|xpndarray) -> Variable:
     return Tanh()(x)
 
 
@@ -48,7 +48,7 @@ class Exp(Function):
     def backward(self, gy: Variable) -> Variable:
         return gy * self.outputs[0]()
 
-def exp(x: Variable) -> Variable:
+def exp(x: Variable|xpndarray) -> Variable:
     return Exp()(x)
 
 
@@ -60,7 +60,7 @@ class Log(Function):
         x, = self.inputs
         return gy / x
 
-def log(x: Variable) -> Variable:
+def log(x: Variable|xpndarray) -> Variable:
     return Log()(x)
 
 
@@ -75,7 +75,7 @@ class Reshape(Function):
     def backward(self, gy: Variable) -> Variable:
         return reshape(gy, self.x_shape)
 
-def reshape(x: Variable, shape: tuple[int, ...]) -> Variable:
+def reshape(x: Variable|xpndarray, shape: tuple[int, ...]) -> Variable:
     if x.shape == shape:
         return as_variable(x)
     return Reshape(shape)(x)
@@ -96,7 +96,7 @@ class Transpose(Function):
         )
         return transpose(gy, inv_axes)
 
-def transpose(x: Variable, axes: tuple[int, ...]|None =None) -> Variable:
+def transpose(x: Variable|xpndarray, axes: tuple[int, ...]|None =None) -> Variable:
     return Transpose(axes)(x)
 
 
@@ -113,7 +113,7 @@ class Sum(Function):
         gy: Variable = utils.reshape_sum_backward(gy, self.x_shape, self.axis, self.keepdims)
         return broadcast_to(gy, self.x_shape)
 
-def sum(x: Variable, axis: int|None =None, keepdims: bool =False) -> Variable:
+def sum(x: Variable|xpndarray, axis: int|None =None, keepdims: bool =False) -> Variable:
     return Sum(axis, keepdims)(x)
 
 
@@ -128,7 +128,7 @@ class BroadCastTo(Function):
     def backward(self, gy: Variable) -> Variable:
         return sum_to(gy, self.x_shape)
 
-def broadcast_to(x: Variable, shape: tuple[int, ...]) -> Variable:
+def broadcast_to(x: Variable|xpndarray, shape: tuple[int, ...]) -> Variable:
     if x.shape == shape:
         return as_variable(x)
     return BroadCastTo(shape)(x)
@@ -145,7 +145,7 @@ class SumTo(Function):
     def backward(self, gy: Variable) -> Variable:
         return broadcast_to(gy, self.x_shape)
 
-def sum_to(x: Variable, shape: tuple[int, ...]) -> Variable:
+def sum_to(x: Variable|xpndarray, shape: tuple[int, ...]) -> Variable:
     if x.shape == shape:
         return as_variable(x)
     return SumTo(shape)(x)
@@ -161,7 +161,7 @@ class MatMul(Function):
         gW: Variable = matmul(x.T, gy)
         return [gx, gW]
 
-def matmul(x: Variable, W: Variable) -> Variable:
+def matmul(x: Variable|xpndarray, W: Variable) -> Variable:
     return MatMul()(x, W)
 
 
@@ -179,10 +179,10 @@ class Linear(Function):
         gW: Variable = matmul(x.T, gy)
         return [gx, gW, gb]
 
-def linear(x: Variable, W: Variable, b: Variable|None) -> Variable:
+def linear(x: Variable|xpndarray, W: Variable|xpndarray, b: Variable|xpndarray|None) -> Variable:
     return Linear()(x, W, b)
 
-def linear_simple(x: xpndarray|Variable, W: xpndarray|Variable, b: xpndarray|Variable|None =None) -> Variable:
+def linear_simple(x: Variable|xpndarray, W: Variable|xpndarray, b: Variable|xpndarray|None =None) -> Variable:
     x = as_variable(x)
     W = as_variable(W)
     t: Variable = matmul(x, W)
@@ -204,7 +204,7 @@ class Sigmoid(Function):
 def sigmoid(x: Variable) -> Variable:
     return Sigmoid()(x)
 
-def sigmoid_simple(x: xpndarray|Variable) -> Variable:
+def sigmoid_simple(x: Variable|xpndarray) -> Variable:
     x = as_variable(x)
     return 1 / (1 + exp(-x))
 
@@ -218,10 +218,10 @@ class Softmax(Function):
         y = xpy.exp(y)
         return y / y.sum(axis=self.axis, keepdims=True)
 
-def softmax(x: Variable, axis: int =1) -> Variable:
+def softmax(x: Variable|xpndarray, axis: int =1) -> Variable:
     return Softmax(axis)(x)
 
-def softmax_simple(x: xpndarray|Variable, axis: int =1) -> Variable:
+def softmax_simple(x: Variable|xpndarray, axis: int =1) -> Variable:
     x = as_variable(x)
     y: Variable = exp(x)
     return y / sum(y, axis=axis, keepdims=True)
@@ -235,7 +235,7 @@ class ReLU(Function):
         x, = self.inputs
         return gy * (x.data > 0)
 
-def relu(x: Variable) -> Variable:
+def relu(x: Variable|xpndarray) -> Variable:
     return ReLU()(x)
 
 
@@ -252,7 +252,7 @@ class MeanSquaredError(Function):
         gx1: Variable = - gx0
         return [gx0, gx1]
 
-def mean_squared_error(x0: Variable, x1: Variable) -> Variable:
+def mean_squared_error(x0: Variable|xpndarray, x1: Variable|xpndarray) -> Variable:
     return MeanSquaredError()(x0, x1)
 
 
@@ -271,10 +271,10 @@ class SoftmaxCrossEntropy(Function):
         t_onehot: xpndarray = xpy.eye(CLS_NUM, dtype=t.dtype)[t.data]
         return (y - t_onehot) * gy
 
-def softmax_cross_entropy(x: Variable, t: Variable) -> float:
+def softmax_cross_entropy(x: Variable|xpndarray, t: Variable|xpndarray) -> float:
     return SoftmaxCrossEntropy()(x, t)
 
-def softmax_cross_entropy_simple(x: xpndarray|Variable, t: xpndarray|Variable) -> float:
+def softmax_cross_entropy_simple(x: Variable|xpndarray, t: Variable|xpndarray) -> float:
     x = as_variable(x)
     t = as_variable(t)
     N: int = x.shape[0]
@@ -295,7 +295,7 @@ class GetItem(Function):
         x, = self.inputs
         return GetItemGrad(self.slices, x.shape)(gy)
 
-def get_item(x: Variable, slices: int|tuple[int, ...]) -> Variable:
+def get_item(x: Variable|xpndarray, slices: int|tuple[int, ...]) -> Variable:
     return GetItem(slices)(x)
 
 
@@ -326,11 +326,11 @@ class Clip(Function):
         mask: bool = (self.x_min <= x) * (x.data <= self.x_max)
         return gy * mask
 
-def clip(x: Variable, x_min: float, x_max: float) -> Variable:
+def clip(x: Variable|xpndarray, x_min: float, x_max: float) -> Variable:
     return Clip(x_min, x_max)(x)
 
 
-def accuracy(ys: xpndarray|Variable, ts: xpndarray|Variable) -> Variable:
+def accuracy(ys: Variable|xpndarray, ts: Variable|xpndarray) -> Variable:
     ys = as_variable(ys)
     ts = as_variable(ts)
     pred: xpndarray = ys.data.argmax(axis=1).reshape(ts.shape)
@@ -338,7 +338,7 @@ def accuracy(ys: xpndarray|Variable, ts: xpndarray|Variable) -> Variable:
     return Variable(as_array(acc))
 
 
-def dropout(x: Variable, dropout_ratio: float =0.5) -> Variable:
+def dropout(x: Variable|xpndarray, dropout_ratio: float =0.5) -> Variable:
     x: Variable = as_variable(x)
     if not dezero.Config.train:
         return x

@@ -26,7 +26,7 @@ class Layer:
         self.outputs: list[Variable] = [weakref.ref(y) for y in outputs]
         return outputs if len(outputs) > 1 else outputs[0]
 
-    def forward(self, inputs: xpndarray) -> xpndarray:
+    def forward(self, inputs: xpndarray) -> Variable:
         raise NotImplementedError()
 
     def params(self) -> Generator[Parameter, None, None]:
